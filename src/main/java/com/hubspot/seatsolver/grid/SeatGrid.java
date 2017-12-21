@@ -10,25 +10,34 @@ import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.Seat;
 
 public class SeatGrid {
-
-  private static final int GRID_SIZE_X = 6;
-  private static final int GRID_SIZE_Y = 6;
+  private static final int MAX_ADJ_OFFSET = 1000;
 
   private final HashMap<Double, HashMap<Double, Seat>> seatGrid;
-
-  public SeatGrid(HashMap<Double, HashMap<Double, Seat>> seatGrid) {
-    this.seatGrid = seatGrid;
-  }
+  private final double gridSizeX;
+  private final double gridSizeY;
 
   public SeatGrid(List<Seat> seats) {
     this.seatGrid = new HashMap<>();
 
+    double maxX = 0;
+    double maxY = 0;
     for (Seat seat : seats) {
       HashMap<Double, Seat> col = seatGrid.getOrDefault(seat.x(), new HashMap<>());
       col.put(seat.y(), seat);
 
       seatGrid.put(seat.x(), col);
+
+      if (seat.x() > maxX) {
+        maxX = seat.x();
+      }
+
+      if (seat.y() > maxY) {
+        maxY = seat.y();
+      }
     }
+
+    gridSizeX = maxX;
+    gridSizeY = maxY;
   }
 
   public boolean isAdjacent(Seat first, Seat second) {
@@ -43,6 +52,14 @@ public class SeatGrid {
   }
 
   public Optional<Seat> findAdjacent(PointBase start, Direction direction) {
+    return findAdjacent(start, direction, 0);
+  }
+
+  public Optional<Seat> findAdjacent(PointBase start, Direction direction, int offset) {
+    if (offset > MAX_ADJ_OFFSET) {
+      return Optional.empty();
+    }
+
     double x = start.x();
     double y = start.y();
 
@@ -61,13 +78,13 @@ public class SeatGrid {
         break;
     }
 
-    if (x < 0 || y < 0 || x > GRID_SIZE_X || y > GRID_SIZE_Y) {
+    if (x < 0 || y < 0 || x > gridSizeX || y > gridSizeY) {
       return Optional.empty();
     }
 
     Seat curSeat = seatGrid.getOrDefault(x, new HashMap<>()).get(y);
     if (curSeat == null) {
-      return findAdjacent(Point.builder().x(x).y(y).build(), direction);
+      return findAdjacent(Point.builder().x(x).y(y).build(), direction, offset + 1);
     }
 
     return Optional.of(curSeat);

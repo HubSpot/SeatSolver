@@ -1,10 +1,7 @@
 package com.hubspot.seatsolver;
 
-import java.io.FileReader;
-import java.io.Reader;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -12,20 +9,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.grid.SeatGrid;
+import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
-import com.hubspot.seatsolver.model.SeatIF;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.PointUtils;
@@ -48,43 +42,11 @@ public class SeatSolver {
   private final SeatGrid seatGrid;
   private final List<Team> teams;
 
-  public SeatSolver(List<Seat> seatList) {
+  public SeatSolver(List<Seat> seatList, List<Team> teams) {
     this.seatList = seatList;
     this.seatGrid = new SeatGrid(seatList);
 
-    this.teams = Lists.newArrayList(
-        Team.builder()
-            .id("A")
-            .numMembers(3)
-            .addWantsAdjacent("B")
-            .build(),
-        Team.builder()
-            .id("B")
-            .numMembers(2)
-            .addWantsAdjacent("C")
-            .addWantsAdjacent("A")
-            .build(),
-        Team.builder()
-            .id("C")
-            .numMembers(5)
-            .addWantsAdjacent("A")
-            .addWantsAdjacent("F")
-            .build(),
-        Team.builder()
-            .id("D")
-            .numMembers(2)
-            .addWantsAdjacent("B")
-            .addWantsAdjacent("F")
-            .build(),
-        Team.builder()
-            .id("E")
-            .addWantsAdjacent("D")
-            .addWantsAdjacent("A")
-            .addWantsAdjacent("C")
-            .numMembers(1)
-            .build(),
-        Team.builder().id("F").numMembers(1).build()
-    );
+    this.teams = teams;
   }
 
   public void run() throws Exception {
@@ -103,7 +65,7 @@ public class SeatSolver {
         .populationSize(100)
         .survivorsSelector(new TournamentSelector<>())
         .offspringSelector(new RouletteWheelSelector<>())
-        .alterers(new MultiPointCrossover<>(.2), new Mutator<>(.15))
+        .alterers(new MultiPointCrossover<>(.3), new Mutator<>(.2))
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
@@ -117,14 +79,15 @@ public class SeatSolver {
         .peek(anyGeneDoubleEvolutionResult -> {
           statistics.accept(anyGeneDoubleEvolutionResult);
 
-          LOG.info("Got intermediate result genotype: {}", anyGeneDoubleEvolutionResult.getBestPhenotype());
+          LOG.debug("Got intermediate result genotype: {}", anyGeneDoubleEvolutionResult.getBestPhenotype());
         })
         .collect(EvolutionResult.toBestPhenotype());
 
     LOG.info("Finished evolving in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     System.out.println(statistics);
 
-    LOG.info("\n\n************\nFitness: {}\nGenotype:\n{}\n*********\n", result.getRawFitness(), result.getGenotype());
+    boolean isValidSolution = validator.validateGenotype(result.getGenotype());
+    LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.MINUTES);
   }
@@ -160,17 +123,15 @@ public class SeatSolver {
         })
         .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
-    return statistics.getAverage() + statistics.getStandardDeviation() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
+    return statistics.getStandardDeviation() / statistics.getAverage() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
   }
 
   public static void main(String[] args) throws Exception {
-    List<Seat> seats = new ArrayList<>();
-    Reader seatMapReader = new FileReader("data/seatmap.csv");
-    for (CSVRecord record : CSVFormat.DEFAULT.withHeader().parse(seatMapReader)) {
-      seats.add(SeatIF.fromCsvRecord(record));
-    }
+    LOG.info("Starting data load");
+    HubspotDataLoader dataLoader = new HubspotDataLoader("data/data.json");
+    dataLoader.load();
 
-    new SeatSolver(seats).run();
+    new SeatSolver(dataLoader.getSeats(), dataLoader.getTeams()).run();
   }
 
 }

@@ -114,6 +114,7 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
+        .add("team", team)
         .add("_genes", _genes)
         .add("_valid", _valid)
         .toString();
