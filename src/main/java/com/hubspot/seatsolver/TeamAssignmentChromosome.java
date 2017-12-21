@@ -2,6 +2,8 @@ package com.hubspot.seatsolver;
 
 import java.util.Iterator;
 
+import com.hubspot.seatsolver.model.Seat;
+
 import io.jenetics.AnyGene;
 import io.jenetics.Chromosome;
 import io.jenetics.util.ISeq;

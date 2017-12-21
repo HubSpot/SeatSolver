@@ -1,4 +1,4 @@
-package com.hubspot.seatsolver;
+package com.hubspot.seatsolver.model;
 
 import java.util.List;
 

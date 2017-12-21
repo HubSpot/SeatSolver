@@ -1,4 +1,4 @@
-package com.hubspot.seatsolver;
+package com.hubspot.seatsolver.model;
 
 import org.apache.commons.csv.CSVRecord;
 import org.immutables.value.Value.Immutable;
@@ -9,10 +9,8 @@ import org.immutables.value.Value.Style;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-public interface SeatIF {
+public interface SeatIF extends PointBase {
   String id();
-  int x();
-  int y();
 
   static Seat fromCsvRecord(CSVRecord record) {
     return Seat.builder()

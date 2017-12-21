@@ -1,6 +1,4 @@
-package com.hubspot.seatsolver;
-
-import java.util.List;
+package com.hubspot.seatsolver.model;
 
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
@@ -10,6 +8,5 @@ import org.immutables.value.Value.Style;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-public interface TeamAssignmentIF {
-  List<Seat> getSeats();
+public interface PointIF extends PointBase {
 }
