@@ -43,6 +43,10 @@ public class SeatGenotypeValidator {
           .map(SeatGene::getSeat)
           .collect(Collectors.toList());
 
+      if (seats.size() <= 1) {
+        continue;
+      }
+
       boolean allAdjacent = seats.stream()
           .allMatch(seat -> {
             return seats.stream().anyMatch(seat2 -> grid.isAdjacent(seat, seat2));
@@ -52,6 +56,8 @@ public class SeatGenotypeValidator {
         return false;
       }
     }
+
+    LOG.trace("Found valid genotype: {}", genotype);
 
     return true;
   }
