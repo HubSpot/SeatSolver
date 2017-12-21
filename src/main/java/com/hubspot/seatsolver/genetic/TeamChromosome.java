@@ -15,7 +15,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Direction;
+import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.AbstractChromosome;
 import io.jenetics.Chromosome;
@@ -27,16 +30,18 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
   private final SeatGrid seatGrid;
   private final List<Seat> allSeats;
+  private final Team team;
 
   public TeamChromosome(SeatGrid seatGrid,
                         List<Seat> allSeats,
-                        int size) {
-    this(seatGrid, allSeats, selectSeatBlock(seatGrid, allSeats, size));
+                        Team team) {
+    this(seatGrid, allSeats, selectSeatBlock(seatGrid, allSeats, team.numMembers()), team);
   }
 
   public TeamChromosome(SeatGrid seatGrid,
                         List<Seat> allSeats,
-                        List<Seat> selectedSeats) {
+                        List<Seat> selectedSeats,
+                        Team team) {
     super(ISeq.of(
         selectedSeats.stream()
             .map(seat -> new SeatGene(allSeats, seat))
@@ -45,15 +50,21 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
     this.seatGrid = seatGrid;
     this.allSeats = allSeats;
+    this.team = team;
   }
 
-  public TeamChromosome(ISeq<? extends SeatGene> genes, SeatGrid seatGrid, List<Seat> allSeats) {
+  public TeamChromosome(ISeq<? extends SeatGene> genes, SeatGrid seatGrid, List<Seat> allSeats, Team team) {
     super(genes);
     this.seatGrid = seatGrid;
     this.allSeats = allSeats;
+    this.team = team;
   }
 
-  public double meanSeatDistance() {
+  public Team getTeam() {
+    return team;
+  }
+
+  public double meanWeightedSeatDistance() {
     // mean of pairwise distances
     List<Seat> seats = toSeq().stream().map(SeatGene::getSeat).collect(Collectors.toList());
 
@@ -65,12 +76,8 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
           continue;
         }
 
-        // Good ol Pythagorean Theorem
-        double xDist = Math.pow(Math.abs(seat.x() - other.x()), 2);
-        double yDist = Math.pow(Math.abs(seat.y() - other.y()), 2);
-
-        double dist = Math.sqrt(xDist + yDist);
-        totalDist += dist;
+        double dist = PointUtils.distance(seat, other);
+        totalDist += Math.pow(dist, 2);
         pairs++;
       }
     }
@@ -82,15 +89,26 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
     return totalDist / ((double) pairs);
   }
 
+  public Point centroid() {
+    // mean of pairwise distances
+    double sumX = toSeq().stream().mapToDouble(gene -> gene.getSeat().x()).sum();
+    double sumY = toSeq().stream().mapToDouble(gene -> gene.getSeat().y()).sum();
+
+    double x = sumX / length();
+    double y = sumY / length();
+
+    return Point.builder().x(x).y(y).build();
+  }
+
   @Override
   public Chromosome<SeatGene> newInstance(ISeq<SeatGene> genes) {
-    return new TeamChromosome(genes, seatGrid, allSeats);
+    return new TeamChromosome(genes, seatGrid, allSeats, team);
   }
 
   @Override
   public Chromosome<SeatGene> newInstance() {
     List<Seat> selected = selectSeatBlock(seatGrid, allSeats, length());
-    return new TeamChromosome(seatGrid, allSeats, selected);
+    return new TeamChromosome(seatGrid, allSeats, selected, team);
   }
 
   @Override
@@ -176,4 +194,5 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
     return lastSelected;
   }
+
 }

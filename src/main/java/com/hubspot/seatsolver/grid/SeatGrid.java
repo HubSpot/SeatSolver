@@ -14,9 +14,9 @@ public class SeatGrid {
   private static final int GRID_SIZE_X = 6;
   private static final int GRID_SIZE_Y = 6;
 
-  private final HashMap<Integer, HashMap<Integer, Seat>> seatGrid;
+  private final HashMap<Double, HashMap<Double, Seat>> seatGrid;
 
-  public SeatGrid(HashMap<Integer, HashMap<Integer, Seat>> seatGrid) {
+  public SeatGrid(HashMap<Double, HashMap<Double, Seat>> seatGrid) {
     this.seatGrid = seatGrid;
   }
 
@@ -24,7 +24,7 @@ public class SeatGrid {
     this.seatGrid = new HashMap<>();
 
     for (Seat seat : seats) {
-      HashMap<Integer, Seat> col = seatGrid.getOrDefault(seat.x(), new HashMap<>());
+      HashMap<Double, Seat> col = seatGrid.getOrDefault(seat.x(), new HashMap<>());
       col.put(seat.y(), seat);
 
       seatGrid.put(seat.x(), col);
@@ -43,8 +43,8 @@ public class SeatGrid {
   }
 
   public Optional<Seat> findAdjacent(PointBase start, Direction direction) {
-    int x = start.x();
-    int y = start.y();
+    double x = start.x();
+    double y = start.y();
 
     switch (direction) {
       case NORTH:

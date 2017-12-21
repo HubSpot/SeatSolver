@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -17,10 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
@@ -30,9 +28,14 @@ import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.SeatIF;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
+import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Genotype;
+import io.jenetics.MultiPointCrossover;
+import io.jenetics.Mutator;
 import io.jenetics.Phenotype;
+import io.jenetics.RouletteWheelSelector;
+import io.jenetics.TournamentSelector;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
@@ -50,11 +53,36 @@ public class SeatSolver {
     this.seatGrid = new SeatGrid(seatList);
 
     this.teams = Lists.newArrayList(
-        Team.builder().id("A").numMembers(3).build(),
-        Team.builder().id("B").numMembers(2).build(),
-        Team.builder().id("C").numMembers(5).build(),
-        Team.builder().id("D").numMembers(2).build(),
-        Team.builder().id("E").numMembers(1).build(),
+        Team.builder()
+            .id("A")
+            .numMembers(3)
+            .addWantsAdjacent("B")
+            .build(),
+        Team.builder()
+            .id("B")
+            .numMembers(2)
+            .addWantsAdjacent("C")
+            .addWantsAdjacent("A")
+            .build(),
+        Team.builder()
+            .id("C")
+            .numMembers(5)
+            .addWantsAdjacent("A")
+            .addWantsAdjacent("F")
+            .build(),
+        Team.builder()
+            .id("D")
+            .numMembers(2)
+            .addWantsAdjacent("B")
+            .addWantsAdjacent("F")
+            .build(),
+        Team.builder()
+            .id("E")
+            .addWantsAdjacent("D")
+            .addWantsAdjacent("A")
+            .addWantsAdjacent("C")
+            .numMembers(1)
+            .build(),
         Team.builder().id("F").numMembers(1).build()
     );
   }
@@ -72,6 +100,10 @@ public class SeatSolver {
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(validator::validateGenotype)
+        .populationSize(100)
+        .survivorsSelector(new TournamentSelector<>())
+        .offspringSelector(new RouletteWheelSelector<>())
+        .alterers(new MultiPointCrossover<>(.2), new Mutator<>(.15))
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
@@ -79,7 +111,7 @@ public class SeatSolver {
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
     Phenotype<SeatGene, Double> result = engine.stream()
-        .limit(Limits.byFitnessConvergence(10, 50,  .000000000001))
+        .limit(Limits.bySteadyFitness(50))
         .limit(Limits.byExecutionTime(Duration.of(3, ChronoUnit.MINUTES)))
         .limit(1000)
         .peek(anyGeneDoubleEvolutionResult -> {
@@ -98,28 +130,37 @@ public class SeatSolver {
   }
 
   private double fitness(Genotype<SeatGene> genotype) {
-    List<Double> meanDists = genotype.stream()
-        .map(seatGenes -> {
+    // Minimize distance between team members
+    DoubleStatistics statistics = genotype.stream()
+        .mapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
-          return chromosome.meanSeatDistance();
+          return chromosome.meanWeightedSeatDistance();
         })
-        .collect(Collectors.toList());
-
-    DoubleStatistics statistics = meanDists.stream().mapToDouble(v -> v)
         .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
-    Multiset<String> dups = HashMultiset.create();
-    genotype.stream().flatMap(c -> c.stream()).map(SeatGene::getSeat).map(Seat::id).forEach(dups::add);
+    Map<String, TeamChromosome> chomosomeByTeam = genotype.stream()
+        .map(c -> ((TeamChromosome) c))
+        .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
-    int dupCount = 0;
-    for (Entry<String> stringEntry : dups.entrySet()) {
-      if (stringEntry.getCount() > 1) {
-        dupCount += stringEntry.getCount();
-      }
-    }
+    // Minimize requested adjacent team distance
+    DoubleStatistics adjacencyStats = genotype.stream()
+        .mapToDouble(seatGenes -> {
+          TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
-    return statistics.getAverage() + statistics.getStandardDeviation() + Math.pow(dupCount, 2);
+          DoubleStatistics teamStats = chromosome.getTeam().wantsAdjacent().stream()
+              .mapToDouble(id -> {
+                TeamChromosome other = chomosomeByTeam.get(id);
+
+                return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid()));
+              })
+              .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
+
+          return teamStats.getAverage();
+        })
+        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
+
+    return statistics.getAverage() + statistics.getStandardDeviation() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
   }
 
   public static void main(String[] args) throws Exception {

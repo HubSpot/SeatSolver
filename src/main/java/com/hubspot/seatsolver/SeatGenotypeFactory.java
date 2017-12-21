@@ -55,6 +55,6 @@ class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
 
     LOG.trace("Selected {} for team {}, remaining: {}", selected, team, remaining);
 
-    return new TeamChromosome(grid, seats, selected);
+    return new TeamChromosome(grid, seats, selected, team);
   }
 }
