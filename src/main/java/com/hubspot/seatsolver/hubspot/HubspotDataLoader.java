@@ -1,6 +1,7 @@
 package com.hubspot.seatsolver.hubspot;
 
 import java.io.FileReader;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,36 +29,41 @@ public class HubspotDataLoader {
   }
 
   public void load() throws Exception {
-      FileReader reader = new FileReader("data/data.json");
+    FileReader reader = new FileReader("data/data.json");
 
-      HubspotData data = objectMapper.readValue(reader, HubspotData.class);
+    HubspotData data = objectMapper.readValue(reader, HubspotData.class);
 
-      LOG.info("Loaded {} teams", data.teamData().size());
+    LOG.info("Loaded {} teams", data.teamData().size());
 
-      List<Seat> second = data.floorData().get("2c2").stream()
-          .map(HubspotSeat::toSeat)
-          .collect(Collectors.toList());
+    List<Seat> second = data.floorData().get("2c2").stream()
+        .map(HubspotSeat::toSeat)
+        .collect(Collectors.toList());
 
-      List<Seat> first = data.floorData().get("2c1").stream()
-          .map(HubspotSeat::toSeat)
-          .map(seat -> {
-            return Seat.builder().from(seat)
-                .x(seat.x() + 10000)
-                .y(seat.y() + 10000)
-                .build();
-          })
-          .collect(Collectors.toList());
+    List<Seat> first = data.floorData().get("2c1").stream()
+        .map(HubspotSeat::toSeat)
+        .map(seat -> {
+          return Seat.builder().from(seat)
+              .x(seat.x() + 10000)
+              .y(seat.y() + 10000)
+              .build();
+        })
+        .collect(Collectors.toList());
 
-      second.addAll(first);
-      seats = second;
+    second.addAll(first);
+    seats = second;
 
-      teams = data.teamData().entrySet().stream()
-          .map(entry -> Team.builder()
-              .id(entry.getKey())
-              .numMembers(entry.getValue().size())
-              .build()
-          )
-          .collect(Collectors.toList());
+    teams = data.teamData().entrySet().stream()
+        .map(entry -> {
+              List<HubspotAdjacency> adjacencies = data.adjacency().getOrDefault(entry.getKey(), Collections.emptyList());
+              List<String> wantsAdjacent = adjacencies.stream().map(HubspotAdjacency::target).collect(Collectors.toList());
+              return Team.builder()
+                  .id(entry.getKey())
+                  .numMembers(entry.getValue().size())
+                  .addAllWantsAdjacent(wantsAdjacent)
+                  .build();
+            }
+        )
+        .collect(Collectors.toList());
   }
 
   public List<Seat> getSeats() {

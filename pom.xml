@@ -82,6 +82,11 @@
       <artifactId>value</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>info.leadinglight</groupId>
+      <artifactId>jdot</artifactId>
+      <version>1.0</version>
+    </dependency>
   </dependencies>
 
 </project>

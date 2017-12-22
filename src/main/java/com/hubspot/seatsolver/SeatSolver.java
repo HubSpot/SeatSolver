@@ -22,6 +22,7 @@ import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
+import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Genotype;
@@ -29,6 +30,7 @@ import io.jenetics.MultiPointCrossover;
 import io.jenetics.Mutator;
 import io.jenetics.Phenotype;
 import io.jenetics.RouletteWheelSelector;
+import io.jenetics.SinglePointCrossover;
 import io.jenetics.TournamentSelector;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -55,7 +57,7 @@ public class SeatSolver {
     SeatGenotypeFactory factory = new SeatGenotypeFactory(seatList, seatGrid, teams);
     SeatGenotypeValidator validator = new SeatGenotypeValidator(seatGrid);
 
-    ExecutorService executorService = Executors.newFixedThreadPool(20, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("seat-solver-evolve-%d").build());
+    ExecutorService executorService = Executors.newFixedThreadPool(16, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("seat-solver-evolve-%d").build());
 
     Engine<SeatGene, Double> engine = Engine.builder(this::fitness, factory)
         .executor(executorService)
@@ -65,7 +67,7 @@ public class SeatSolver {
         .populationSize(100)
         .survivorsSelector(new TournamentSelector<>())
         .offspringSelector(new RouletteWheelSelector<>())
-        .alterers(new MultiPointCrossover<>(.3), new Mutator<>(.2))
+        .alterers(new MultiPointCrossover<>(.4), new Mutator<>(.3), new SinglePointCrossover<>(.1))
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
@@ -74,11 +76,12 @@ public class SeatSolver {
 
     Phenotype<SeatGene, Double> result = engine.stream()
         .limit(Limits.bySteadyFitness(50))
-        .limit(Limits.byExecutionTime(Duration.of(3, ChronoUnit.MINUTES)))
+        .limit(Limits.byExecutionTime(Duration.of(10, ChronoUnit.SECONDS)))
         .limit(1000)
         .peek(anyGeneDoubleEvolutionResult -> {
           statistics.accept(anyGeneDoubleEvolutionResult);
 
+          LOG.info("Got intermediate result with score: {}", anyGeneDoubleEvolutionResult.getBestPhenotype().getRawFitness());
           LOG.debug("Got intermediate result genotype: {}", anyGeneDoubleEvolutionResult.getBestPhenotype());
         })
         .collect(EvolutionResult.toBestPhenotype());
@@ -90,6 +93,8 @@ public class SeatSolver {
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.MINUTES);
+
+    new GenotypeVisualizer(result.getGenotype()).outputGraphViz("out.dot");
   }
 
   private double fitness(Genotype<SeatGene> genotype) {
@@ -115,7 +120,7 @@ public class SeatSolver {
               .mapToDouble(id -> {
                 TeamChromosome other = chomosomeByTeam.get(id);
 
-                return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid()));
+                return Math.pow(Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())), 2);
               })
               .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
@@ -123,7 +128,7 @@ public class SeatSolver {
         })
         .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
-    return statistics.getStandardDeviation() / statistics.getAverage() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
+    return statistics.getStandardDeviation() + statistics.getAverage() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
   }
 
   public static void main(String[] args) throws Exception {

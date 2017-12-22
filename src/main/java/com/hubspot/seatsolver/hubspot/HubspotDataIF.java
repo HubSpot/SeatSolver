@@ -24,4 +24,6 @@ public interface HubspotDataIF {
 
   @JsonProperty("floor_data")
   Map<String, List<HubspotSeat>> floorData();
+
+  Map<String, List<HubspotAdjacency>> adjacency();
 }
