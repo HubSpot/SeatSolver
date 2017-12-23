@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.hubspot</groupId>
     <artifactId>basepom</artifactId>
-    <version>18.1-SNAPSHOT</version>
+    <version>18.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>SeatSolver</artifactId>
@@ -28,6 +28,16 @@
         <groupId>io.jenetics</groupId>
         <artifactId>jenetics</artifactId>
         <version>4.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>info.leadinglight</groupId>
+        <artifactId>jdot</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>Quadtree</groupId>
+        <artifactId>Quadtree</artifactId>
+        <version>1.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -85,7 +95,10 @@
     <dependency>
       <groupId>info.leadinglight</groupId>
       <artifactId>jdot</artifactId>
-      <version>1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>Quadtree</groupId>
+      <artifactId>Quadtree</artifactId>
     </dependency>
   </dependencies>
 

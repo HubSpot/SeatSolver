@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.hubspot.seatsolver.model.Adjacency;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
@@ -43,8 +44,8 @@ public class HubspotDataLoader {
         .map(HubspotSeat::toSeat)
         .map(seat -> {
           return Seat.builder().from(seat)
-              .x(seat.x() + 10000)
-              .y(seat.y() + 10000)
+              .x(seat.x() + 1000)
+              .y(seat.y() + 1000)
               .build();
         })
         .collect(Collectors.toList());
@@ -55,7 +56,16 @@ public class HubspotDataLoader {
     teams = data.teamData().entrySet().stream()
         .map(entry -> {
               List<HubspotAdjacency> adjacencies = data.adjacency().getOrDefault(entry.getKey(), Collections.emptyList());
-              List<String> wantsAdjacent = adjacencies.stream().map(HubspotAdjacency::target).collect(Collectors.toList());
+              List<Adjacency> wantsAdjacent = adjacencies.stream()
+                  .map(a -> {
+                    double weight = a.value().orElse(.1);
+
+                    return Adjacency.builder()
+                        .id(a.target())
+                        .weight(weight)
+                        .build();
+                  })
+                  .collect(Collectors.toList());
               return Team.builder()
                   .id(entry.getKey())
                   .numMembers(entry.getValue().size())

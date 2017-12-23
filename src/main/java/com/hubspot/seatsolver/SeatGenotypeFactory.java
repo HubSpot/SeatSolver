@@ -1,6 +1,5 @@
 package com.hubspot.seatsolver;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,7 +41,7 @@ class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
     LOG.trace("Generating new genotype");
     Set<Seat> availableSeats = Sets.newHashSet(seats);
     List<TeamChromosome> chromosomes = teams.stream()
-        .sorted(Comparator.comparing(Team::numMembers).reversed())
+        //.sorted(Comparator.comparing(Team::numMembers).reversed())
         .map(team -> chromosomeForTeam(team, availableSeats))
         .collect(Collectors.toList());
 

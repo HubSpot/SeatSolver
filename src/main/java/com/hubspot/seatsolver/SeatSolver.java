@@ -21,7 +21,6 @@ import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
-import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.PointUtils;
 
@@ -30,8 +29,9 @@ import io.jenetics.MultiPointCrossover;
 import io.jenetics.Mutator;
 import io.jenetics.Phenotype;
 import io.jenetics.RouletteWheelSelector;
-import io.jenetics.SinglePointCrossover;
+import io.jenetics.SwapMutator;
 import io.jenetics.TournamentSelector;
+import io.jenetics.UniformCrossover;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
@@ -57,17 +57,22 @@ public class SeatSolver {
     SeatGenotypeFactory factory = new SeatGenotypeFactory(seatList, seatGrid, teams);
     SeatGenotypeValidator validator = new SeatGenotypeValidator(seatGrid);
 
-    ExecutorService executorService = Executors.newFixedThreadPool(16, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("seat-solver-evolve-%d").build());
+    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setDaemon(true).setNameFormat("seat-solver-evolve-%d").build());
 
     Engine<SeatGene, Double> engine = Engine.builder(this::fitness, factory)
         .executor(executorService)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(validator::validateGenotype)
-        .populationSize(100)
-        .survivorsSelector(new TournamentSelector<>())
+        .populationSize(200)
+        .survivorsSelector(new TournamentSelector<>(4))
         .offspringSelector(new RouletteWheelSelector<>())
-        .alterers(new MultiPointCrossover<>(.4), new Mutator<>(.3), new SinglePointCrossover<>(.1))
+        .alterers(
+            new SwapMutator<>(.4),
+            new MultiPointCrossover<>(.4, 8),
+            new UniformCrossover<>(.3),
+            new Mutator<>(.2)
+        )
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
@@ -75,9 +80,9 @@ public class SeatSolver {
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
     Phenotype<SeatGene, Double> result = engine.stream()
-        .limit(Limits.bySteadyFitness(50))
-        .limit(Limits.byExecutionTime(Duration.of(10, ChronoUnit.SECONDS)))
-        .limit(1000)
+        .limit(Limits.byFitnessConvergence(20, 200, .000000000001))
+        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.MINUTES)))
+        .limit(100000)
         .peek(anyGeneDoubleEvolutionResult -> {
           statistics.accept(anyGeneDoubleEvolutionResult);
 
@@ -94,41 +99,50 @@ public class SeatSolver {
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.MINUTES);
 
-    new GenotypeVisualizer(result.getGenotype()).outputGraphViz("out.dot");
+    new GenotypeVisualizer(result.getGenotype(), seatList).outputGraphViz("out/out.dot");
   }
 
   private double fitness(Genotype<SeatGene> genotype) {
     // Minimize distance between team members
-    DoubleStatistics statistics = genotype.stream()
+    List<Double> intraTeamScores = genotype.stream()
         .mapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
           return chromosome.meanWeightedSeatDistance();
         })
-        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
+        .boxed()
+        .collect(Collectors.toList());
+
+    double seventyFifthIntraTeam = percentile(intraTeamScores, 75);
 
     Map<String, TeamChromosome> chomosomeByTeam = genotype.stream()
         .map(c -> ((TeamChromosome) c))
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
     // Minimize requested adjacent team distance
-    DoubleStatistics adjacencyStats = genotype.stream()
-        .mapToDouble(seatGenes -> {
+    List<Double> scores = genotype.stream()
+        .flatMapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
-          DoubleStatistics teamStats = chromosome.getTeam().wantsAdjacent().stream()
-              .mapToDouble(id -> {
-                TeamChromosome other = chomosomeByTeam.get(id);
+          return chromosome.getTeam().wantsAdjacent().stream()
+              .mapToDouble(adj -> {
+                TeamChromosome other = chomosomeByTeam.get(adj.id());
+                if (other == null) {
+                  return ((double) 0);
+                }
 
-                return Math.pow(Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())), 2);
-              })
-              .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
-
-          return teamStats.getAverage();
+                return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
+              });
         })
-        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
+        .boxed()
+        .collect(Collectors.toList());
 
-    return statistics.getStandardDeviation() + statistics.getAverage() + adjacencyStats.getAverage() + adjacencyStats.getStandardDeviation();
+    double seventyFifthInterTeam = percentile(scores, 75);
+    double ninetyFifthInterTeam = percentile(scores, 95);
+
+    LOG.trace("Inter: {}", seventyFifthInterTeam);
+    LOG.trace("Intra: {}", seventyFifthIntraTeam);
+     return seventyFifthInterTeam + ninetyFifthInterTeam + seventyFifthIntraTeam;
   }
 
   public static void main(String[] args) throws Exception {
@@ -139,4 +153,9 @@ public class SeatSolver {
     new SeatSolver(dataLoader.getSeats(), dataLoader.getTeams()).run();
   }
 
+  public static double percentile(List<Double> values, double percentile) {
+    List<Double> sorted = values.stream().sorted().collect(Collectors.toList());
+    int idx = (int) Math.ceil((percentile / (double)100) * (double)sorted.size());
+    return sorted.get(idx-1);
+  }
 }

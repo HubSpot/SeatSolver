@@ -1,7 +1,5 @@
 package com.hubspot.seatsolver.model;
 
-import java.util.List;
-
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
 
@@ -10,8 +8,7 @@ import org.immutables.value.Value.Style;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-public interface TeamIF {
+public interface AdjacencyIF {
   String id();
-  int numMembers();
-  List<Adjacency> wantsAdjacent();
+  double weight();
 }
