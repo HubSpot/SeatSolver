@@ -1,8 +1,8 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -140,6 +140,7 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
         }
 
         selected.add(randomSeat);
+        selectedSet.add(randomSeat);
       }
 
       if (selected.size() < size) {
@@ -153,47 +154,50 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
   private static List<Seat> selectBlock(SeatGrid grid, List<Seat> availableSeatList, int size) {
     Set<Seat> availableSeatSet = Sets.newHashSet(availableSeatList);
 
-    List<Seat> lastSelected = new ArrayList<>();
+    Set<Seat> lastSelected = new HashSet<>();
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
       // pick a random starting point
       int startSeatIdx = RandomRegistry.getRandom().nextInt(availableSeatList.size());
       Seat seat = availableSeatList.get(startSeatIdx);
 
-      int seatAttempts = 0;
-      List<Seat> selectedList = Lists.newArrayList(seat);
-      Set<Seat> selectedSet = Sets.newHashSet(seat);
-      while (selectedSet.size() < size && seatAttempts < MAX_SEAT_ATTEMPTS) {
-        seatAttempts++;
-
-        // Pick random existing seat to start from
-        int originSeatIdx = RandomRegistry.getRandom().nextInt(selectedSet.size());
-        Seat origin = selectedList.get(originSeatIdx);
-
-        Set<Seat> allAdjacent = grid.getAdjacent(origin);
-
-        Set<Seat> unselectedAdjacent = Sets.difference(allAdjacent, selectedSet);
-        Set<Seat> useableAdjacent = Sets.intersection(unselectedAdjacent, availableSeatSet);
-        List<Seat> useable = new ArrayList<>(useableAdjacent);
-
-        if (useable.size() == 0) {
-          continue;
+      Set<Seat> selected = Sets.newHashSet(seat);
+      for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
+        if (selected.size() == size) {
+          break;
         }
 
-        int newSeatIdx = RandomRegistry.getRandom().nextInt(useable.size());
-        Seat newSeat = useable.get(newSeatIdx);
+        Optional<Seat> nextSeat = selectAdjacent(selected, availableSeatSet, grid);
+        if (!nextSeat.isPresent()) {
+          break;
+        }
 
-        selectedList.add(newSeat);
-        selectedSet.add(newSeat);
+        selected.add(nextSeat.get());
       }
 
-      if (selectedSet.size() == size) {
-        return selectedList;
+      if (selected.size() == size) {
+        return Lists.newArrayList(selected);
       }
 
-      lastSelected = selectedList;
+      lastSelected = selected;
     }
 
-    return lastSelected;
+    return Lists.newArrayList(lastSelected);
+  }
+
+  public static Optional<Seat> selectAdjacent(Set<Seat> existing, Set<Seat> available, SeatGrid grid) {
+    Set<Seat> allAdjacent = existing.stream()
+        .flatMap(seat -> grid.getAdjacent(seat).stream())
+        .collect(Collectors.toSet());
+
+    Set<Seat> newAdjacent = Sets.difference(allAdjacent, existing);
+
+    List<Seat> availableAdjacent = Lists.newArrayList(Sets.intersection(newAdjacent, available));
+    if (availableAdjacent.size() == 0) {
+      return Optional.empty();
+    }
+
+    int idx = RandomRegistry.getRandom().nextInt(availableAdjacent.size());
+    return Optional.of(availableAdjacent.get(idx));
   }
 
 }

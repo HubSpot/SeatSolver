@@ -1,13 +1,14 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Sets;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
 
@@ -39,20 +40,21 @@ public class SeatGenotypeValidator {
 
     // now do adjacency
     for (Chromosome<SeatGene> chromosome : genotype) {
-      List<Seat> seats = chromosome.stream()
-          .map(SeatGene::getSeat)
-          .collect(Collectors.toList());
-
-      if (seats.size() <= 1) {
+      if (chromosome.length() == 1) {
         continue;
       }
 
-      boolean allAdjacent = seats.stream()
-          .allMatch(seat -> {
-            return seats.stream().anyMatch(seat2 -> grid.isAdjacent(seat, seat2));
-          });
+      Set<Seat> seats = chromosome.stream()
+          .map(SeatGene::getSeat)
+          .collect(Collectors.toSet());
 
-      if (!allAdjacent) {
+      Seat start = seats.iterator().next();
+
+      Set<Seat> connected = connectedSeatsForSeat(start, seats);
+      connectedSeatsForSeat(start, seats);
+
+      if (connected.size() < chromosome.length()) {
+        LOG.debug("Got unconnected chromosome: {}", chromosome.stream().collect(Collectors.toList()));
         return false;
       }
     }
@@ -60,5 +62,31 @@ public class SeatGenotypeValidator {
     LOG.trace("Found valid genotype: {}", genotype);
 
     return true;
+  }
+
+  private Set<Seat> connectedSeatsForSeat(Seat seat, Set<Seat> toFind) {
+    if (toFind.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    Set<Seat> toFindMinusSelf = new HashSet<>(toFind);
+    toFindMinusSelf.remove(seat);
+
+    Set<Seat> adjacentSeats = Sets.newHashSet(grid.getAdjacent(seat));
+    adjacentSeats.removeIf(s -> !toFind.contains(s));
+
+    Set<Seat> toFindMinusAdjacent = new HashSet<>(toFindMinusSelf);
+    toFindMinusAdjacent.removeAll(adjacentSeats);
+
+    Set<Seat> result = new HashSet<>(adjacentSeats);
+    result.add(seat);
+
+    for (Seat adjacentSeat: adjacentSeats) {
+      Set<Seat> nextConnected = connectedSeatsForSeat(adjacentSeat, toFindMinusAdjacent);
+      toFindMinusAdjacent.removeAll(nextConnected);
+      result.addAll(nextConnected);
+    }
+
+    return result;
   }
 }

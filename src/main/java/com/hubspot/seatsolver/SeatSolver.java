@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -64,7 +65,7 @@ public class SeatSolver {
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(validator::validateGenotype)
-        .populationSize(200)
+        .populationSize(50)
         .survivorsSelector(new TournamentSelector<>(4))
         .offspringSelector(new RouletteWheelSelector<>())
         .alterers(
@@ -79,12 +80,15 @@ public class SeatSolver {
     LOG.info("Starting evolution");
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
+    AtomicReference<Genotype<SeatGene>> firstGenotype = new AtomicReference<>(null);
+
     Phenotype<SeatGene, Double> result = engine.stream()
         .limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.MINUTES)))
+        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.MILLIS)))
         .limit(100000)
         .peek(anyGeneDoubleEvolutionResult -> {
           statistics.accept(anyGeneDoubleEvolutionResult);
+          firstGenotype.compareAndSet(null, anyGeneDoubleEvolutionResult.getBestPhenotype().getGenotype());
 
           LOG.info("Got intermediate result with score: {}", anyGeneDoubleEvolutionResult.getBestPhenotype().getRawFitness());
           LOG.debug("Got intermediate result genotype: {}", anyGeneDoubleEvolutionResult.getBestPhenotype());
@@ -100,6 +104,7 @@ public class SeatSolver {
     executorService.awaitTermination(1, TimeUnit.MINUTES);
 
     new GenotypeVisualizer(result.getGenotype(), seatList).outputGraphViz("out/out.dot");
+    new GenotypeVisualizer(firstGenotype.get(), seatList).outputGraphViz("out/first.dot");
   }
 
   private double fitness(Genotype<SeatGene> genotype) {

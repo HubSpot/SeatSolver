@@ -1,12 +1,15 @@
 package com.hubspot.seatsolver;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.hubspot.seatsolver.genetic.SeatGene;
@@ -38,13 +41,17 @@ class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
     // This is a very naive algorithm, we pick a random unused seat, start there and then find the adjacent seats and make chromosome from that
     // We also randomize the direction of movement, and the previous seat from which movement starts
     // We will allow invalid solutions by simply picking an unused seat if we are boxed in
-    LOG.trace("Generating new genotype");
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    LOG.debug("Starting new genotype generation");
     Set<Seat> availableSeats = Sets.newHashSet(seats);
+
+    Collections.shuffle(teams); // Random generation order every time
     List<TeamChromosome> chromosomes = teams.stream()
         //.sorted(Comparator.comparing(Team::numMembers).reversed())
         .map(team -> chromosomeForTeam(team, availableSeats))
         .collect(Collectors.toList());
 
+    LOG.debug("Finished new genotype generation in {}ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     return Genotype.of(chromosomes);
   }
 

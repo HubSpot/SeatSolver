@@ -5,11 +5,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.github.varunpant.quadtree.QuadTree;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
@@ -20,23 +23,22 @@ public class SeatGrid {
   private static final int SEAT_WIDTH = 12;
   private static final int SEAT_HEIGHT = 14;
 
-  private final HashMap<Double, HashMap<Double, Seat>> seatGrid;
+  private final Map<Double, Map<Double, Seat>> seatGrid;
   private final QuadTree<Seat> seatQuadTree;
   private final SetMultimap<Seat, Seat> adjacencyMap;
   private final double gridSizeX;
   private final double gridSizeY;
 
   public SeatGrid(List<Seat> seats) {
-    this.seatGrid = new HashMap<>();
+    HashMap<Double, HashMap<Double, Seat>> grid = new HashMap<>();
 
     double maxX = 0;
     double maxY = 0;
     for (Seat seat : seats) {
-      HashMap<Double, Seat> col = seatGrid.getOrDefault(seat.x(), new HashMap<>());
+      HashMap<Double, Seat> col = grid.getOrDefault(seat.x(), new HashMap<>());
       col.put(seat.y(), seat);
 
-      seatGrid.put(seat.x(), col);
-
+      grid.put(seat.x(), col);
 
       if (seat.x() > maxX) {
         maxX = seat.x();
@@ -47,23 +49,26 @@ public class SeatGrid {
       }
     }
 
+    HashMap<Double, ImmutableMap<Double, Seat>> immutableColMap = new HashMap<>();
+    grid.entrySet().forEach(entry -> {
+      immutableColMap.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue()));
+    });
+
+    this.seatGrid = ImmutableMap.copyOf(immutableColMap);
+
     this.gridSizeX = maxX;
     this.gridSizeY = maxY;
 
     this.seatQuadTree = new QuadTree<>(0, 0, maxX, maxY);
     seats.forEach(seat -> seatQuadTree.set(seat.x(), seat.y(), seat));
 
-    this.adjacencyMap = HashMultimap.create();
-    seats.stream().forEach(seat -> {
+    HashMultimap<Seat, Seat> adjMap = HashMultimap.create();
+    seats.forEach(seat -> {
       Set<Seat> adj = findAllAdjacent(seat);
-      adjacencyMap.putAll(seat, adj);
+      adjMap.putAll(seat, adj);
     });
-  }
 
-  public boolean isAdjacent(Seat first, Seat second) {
-    Set<Seat> adjacent = getAdjacent(first);
-
-    return adjacent.contains(second);
+    this.adjacencyMap = ImmutableSetMultimap.copyOf(adjMap);
   }
 
   public Set<Seat> getAdjacent(Seat seat) {
