@@ -28,7 +28,15 @@ public class SeatGenotypeValidator {
     LOG.trace("Validating genotype: {}", genotype);
 
     Set<String> chosen = new HashSet<>();
+    Set<String> empty = new HashSet<>();
     for (Chromosome<SeatGene> chromosome : genotype) {
+      if (chromosome instanceof EmptySeatChromosome) {
+        empty.addAll(chromosome.stream()
+            .map(gene -> gene.getSeat().id())
+            .collect(Collectors.toSet())
+        );
+      }
+
       for (SeatGene gene : chromosome) {
         if (chosen.contains(gene.getSeat().id())) {
           return false;
@@ -38,9 +46,13 @@ public class SeatGenotypeValidator {
       }
     }
 
+    if (chosen.size() + empty.size() < grid.size()) {
+      return false;
+    }
+
     // now do adjacency
     for (Chromosome<SeatGene> chromosome : genotype) {
-      if (chromosome.length() == 1) {
+      if (chromosome.length() == 1 || chromosome instanceof EmptySeatChromosome) {
         continue;
       }
 

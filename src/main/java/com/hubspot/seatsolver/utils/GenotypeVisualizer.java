@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.model.Point;
@@ -32,29 +32,25 @@ public class GenotypeVisualizer {
   private static final int N_COLORS = COLORS.length - 1;
 
   private final Genotype<SeatGene> genotype;
-  private final List<Seat> seats;
 
-  public GenotypeVisualizer(Genotype<SeatGene> genotype, List<Seat> seats) {
+  public GenotypeVisualizer(Genotype<SeatGene> genotype) {
     this.genotype = genotype;
-    this.seats = seats;
   }
 
   public void outputGraphViz(String filename) throws IOException {
     Graph g = new Graph().setType(GraphType.graph);
 
     List<Node> nodes = genotype.stream()
+        .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
         .flatMap(this::chromosomeToNodes)
         .collect(Collectors.toList());
 
-    Set<Seat> used = genotype.stream()
-        .map(c -> ((TeamChromosome) c))
-        .flatMap(c -> c.stream())
+    List<Node> emptyNodes = genotype.stream()
+        .filter(c -> c instanceof EmptySeatChromosome)
+        .map(c -> ((EmptySeatChromosome) c))
+        .flatMap(EmptySeatChromosome::stream)
         .map(SeatGene::getSeat)
-        .collect(Collectors.toSet());
-
-    List<Node> emptyNodes = seats.stream()
-        .filter(seat -> !used.contains(seat))
         .map(seat -> {
           return seatToNode(seat, SVG.black);
         })

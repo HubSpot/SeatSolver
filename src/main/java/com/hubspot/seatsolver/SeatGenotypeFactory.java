@@ -12,12 +12,14 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
+import io.jenetics.Chromosome;
 import io.jenetics.Genotype;
 import io.jenetics.util.Factory;
 
@@ -46,10 +48,12 @@ class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
     Set<Seat> availableSeats = Sets.newHashSet(seats);
 
     Collections.shuffle(teams); // Random generation order every time
-    List<TeamChromosome> chromosomes = teams.stream()
+    List<Chromosome<SeatGene>> chromosomes = teams.stream()
         //.sorted(Comparator.comparing(Team::numMembers).reversed())
         .map(team -> chromosomeForTeam(team, availableSeats))
         .collect(Collectors.toList());
+
+    chromosomes.add(new EmptySeatChromosome(availableSeats, seats));
 
     LOG.debug("Finished new genotype generation in {}ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     return Genotype.of(chromosomes);

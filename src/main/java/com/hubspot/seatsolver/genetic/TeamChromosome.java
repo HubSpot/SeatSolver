@@ -32,12 +32,6 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
   public TeamChromosome(SeatGrid seatGrid,
                         List<Seat> allSeats,
-                        Team team) {
-    this(seatGrid, allSeats, selectSeatBlock(seatGrid, allSeats, team.numMembers()), team);
-  }
-
-  public TeamChromosome(SeatGrid seatGrid,
-                        List<Seat> allSeats,
                         List<Seat> selectedSeats,
                         Team team) {
     super(ISeq.of(

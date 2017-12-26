@@ -4,8 +4,6 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -14,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
@@ -27,11 +25,8 @@ import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Genotype;
 import io.jenetics.MultiPointCrossover;
-import io.jenetics.Mutator;
 import io.jenetics.Phenotype;
-import io.jenetics.RouletteWheelSelector;
 import io.jenetics.SwapMutator;
-import io.jenetics.TournamentSelector;
 import io.jenetics.UniformCrossover;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -58,21 +53,17 @@ public class SeatSolver {
     SeatGenotypeFactory factory = new SeatGenotypeFactory(seatList, seatGrid, teams);
     SeatGenotypeValidator validator = new SeatGenotypeValidator(seatGrid);
 
-    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new ThreadFactoryBuilder().setDaemon(true).setNameFormat("seat-solver-evolve-%d").build());
-
     Engine<SeatGene, Double> engine = Engine.builder(this::fitness, factory)
-        .executor(executorService)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(validator::validateGenotype)
-        .populationSize(50)
-        .survivorsSelector(new TournamentSelector<>(4))
-        .offspringSelector(new RouletteWheelSelector<>())
+        .populationSize(200)
+        .survivorsSize(40)
+        .maximalPhenotypeAge(20)
         .alterers(
-            new SwapMutator<>(.4),
-            new MultiPointCrossover<>(.4, 8),
-            new UniformCrossover<>(.3),
-            new Mutator<>(.2)
+            new SwapMutator<>(.2),
+            new MultiPointCrossover<>(.3, 4),
+            new UniformCrossover<>(.4, .3)
         )
         .build();
 
@@ -83,15 +74,22 @@ public class SeatSolver {
     AtomicReference<Genotype<SeatGene>> firstGenotype = new AtomicReference<>(null);
 
     Phenotype<SeatGene, Double> result = engine.stream()
-        .limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.MILLIS)))
+        //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
+        .limit(Limits.byExecutionTime(Duration.of(1, ChronoUnit.MINUTES)))
         .limit(100000)
-        .peek(anyGeneDoubleEvolutionResult -> {
-          statistics.accept(anyGeneDoubleEvolutionResult);
-          firstGenotype.compareAndSet(null, anyGeneDoubleEvolutionResult.getBestPhenotype().getGenotype());
+        .peek(r -> {
+          statistics.accept(r);
+          firstGenotype.compareAndSet(null, r.getBestPhenotype().getGenotype());
 
-          LOG.info("Got intermediate result with score: {}", anyGeneDoubleEvolutionResult.getBestPhenotype().getRawFitness());
-          LOG.debug("Got intermediate result genotype: {}", anyGeneDoubleEvolutionResult.getBestPhenotype());
+          LOG.info(
+              "Generation {}:\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
+              r.getGeneration(),
+              r.getInvalidCount(),
+              r.getKillCount(),
+              r.getWorstFitness(),
+              r.getBestFitness()
+          );
+          LOG.debug("Got intermediate result genotype: {}", r.getBestPhenotype());
         })
         .collect(EvolutionResult.toBestPhenotype());
 
@@ -100,32 +98,30 @@ public class SeatSolver {
 
     boolean isValidSolution = validator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
-    executorService.shutdown();
-    executorService.awaitTermination(1, TimeUnit.MINUTES);
 
-    new GenotypeVisualizer(result.getGenotype(), seatList).outputGraphViz("out/out.dot");
-    new GenotypeVisualizer(firstGenotype.get(), seatList).outputGraphViz("out/first.dot");
+    new GenotypeVisualizer(result.getGenotype()).outputGraphViz("out/out.dot");
+    new GenotypeVisualizer(firstGenotype.get()).outputGraphViz("out/first.dot");
   }
 
   private double fitness(Genotype<SeatGene> genotype) {
     // Minimize distance between team members
-    List<Double> intraTeamScores = genotype.stream()
+    double intraTeamDist = genotype.stream()
+        .filter(c -> !(c instanceof EmptySeatChromosome))
         .mapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
           return chromosome.meanWeightedSeatDistance();
         })
-        .boxed()
-        .collect(Collectors.toList());
-
-    double seventyFifthIntraTeam = percentile(intraTeamScores, 75);
+        .sum();
 
     Map<String, TeamChromosome> chomosomeByTeam = genotype.stream()
+        .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
     // Minimize requested adjacent team distance
-    List<Double> scores = genotype.stream()
+    double weightedAdjacencyScores = genotype.stream()
+        .filter(c -> !(c instanceof EmptySeatChromosome))
         .flatMapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
@@ -139,15 +135,9 @@ public class SeatSolver {
                 return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
               });
         })
-        .boxed()
-        .collect(Collectors.toList());
+        .sum();
 
-    double seventyFifthInterTeam = percentile(scores, 75);
-    double ninetyFifthInterTeam = percentile(scores, 95);
-
-    LOG.trace("Inter: {}", seventyFifthInterTeam);
-    LOG.trace("Intra: {}", seventyFifthIntraTeam);
-     return seventyFifthInterTeam + ninetyFifthInterTeam + seventyFifthIntraTeam;
+     return weightedAdjacencyScores + intraTeamDist;
   }
 
   public static void main(String[] args) throws Exception {

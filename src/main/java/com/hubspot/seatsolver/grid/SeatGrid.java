@@ -28,8 +28,10 @@ public class SeatGrid {
   private final SetMultimap<Seat, Seat> adjacencyMap;
   private final double gridSizeX;
   private final double gridSizeY;
+  private final int size;
 
   public SeatGrid(List<Seat> seats) {
+    this.size = seats.size();
     HashMap<Double, HashMap<Double, Seat>> grid = new HashMap<>();
 
     double maxX = 0;
@@ -69,6 +71,10 @@ public class SeatGrid {
     });
 
     this.adjacencyMap = ImmutableSetMultimap.copyOf(adjMap);
+  }
+
+  public int size() {
+    return size;
   }
 
   public Set<Seat> getAdjacent(Seat seat) {
