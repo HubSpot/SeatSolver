@@ -26,6 +26,7 @@ import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
+import com.hubspot.seatsolver.utils.GenotypeWriter;
 import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Genotype;
@@ -45,16 +46,19 @@ public class SeatSolver {
   private final List<Team> teams;
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
+  private final GenotypeWriter genotypeWriter;
 
   @Inject
   public SeatSolver(List<Seat> seats,
                     List<Team> teams,
                     SeatGenotypeFactory genotypeFactory,
-                    SeatGenotypeValidator genotypeValidator) {
+                    SeatGenotypeValidator genotypeValidator,
+                    GenotypeWriter genotypeWriter) {
     this.seats = seats;
     this.teams = teams;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
+    this.genotypeWriter = genotypeWriter;
   }
 
   public void run() throws Exception {
@@ -83,7 +87,7 @@ public class SeatSolver {
 
     Phenotype<SeatGene, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.HOURS)))
+        .limit(Limits.byExecutionTime(Duration.of(1, ChronoUnit.HOURS)))
         .limit(100000)
         .peek(r -> {
           statistics.accept(r);
@@ -113,6 +117,7 @@ public class SeatSolver {
     boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
+    genotypeWriter.write(result.getGenotype(), "out/solution.json");
     GenotypeVisualizer.outputGraphViz(result.getGenotype(),"out/out.dot");
   }
 

@@ -57,9 +57,11 @@ public class HubspotDataLoader implements DataLoader {
     teams = data.teamData().entrySet().stream()
         .map(entry -> {
               List<HubspotAdjacency> adjacencies = data.adjacency().getOrDefault(entry.getKey(), Collections.emptyList());
+
+              double totalAdjacencyWeight = adjacencies.stream().mapToDouble(HubspotAdjacency::value).sum();
               List<Adjacency> wantsAdjacent = adjacencies.stream()
                   .map(a -> {
-                    double weight = a.value().orElse(.1);
+                    double weight = a.value() / totalAdjacencyWeight;
 
                     return Adjacency.builder()
                         .id(a.target())
@@ -67,6 +69,7 @@ public class HubspotDataLoader implements DataLoader {
                         .build();
                   })
                   .collect(Collectors.toList());
+
               return Team.builder()
                   .id(entry.getKey())
                   .numMembers(entry.getValue().size())

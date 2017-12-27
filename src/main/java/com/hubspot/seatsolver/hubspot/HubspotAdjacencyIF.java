@@ -1,7 +1,5 @@
 package com.hubspot.seatsolver.hubspot;
 
-import java.util.Optional;
-
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
 
@@ -18,5 +16,5 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 public interface HubspotAdjacencyIF {
   String type();
   String target();
-  Optional<Double> value();
+  double value();
 }
