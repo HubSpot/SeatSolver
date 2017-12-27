@@ -11,11 +11,12 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.hubspot.seatsolver.config.DataLoader;
 import com.hubspot.seatsolver.model.Adjacency;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
-public class HubspotDataLoader {
+public class HubspotDataLoader implements DataLoader {
   private static final Logger LOG = LoggerFactory.getLogger(HubspotDataLoader.class);
 
   private final String filename;

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
 
@@ -20,6 +21,7 @@ public class SeatGenotypeValidator {
 
   private final SeatGrid grid;
 
+  @Inject
   public SeatGenotypeValidator(SeatGrid grid) {
     this.grid = grid;
   }

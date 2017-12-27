@@ -4,11 +4,16 @@ import org.apache.commons.csv.CSVRecord;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 @Immutable
 @Style(
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
+@JsonDeserialize(as = Seat.class)
+@JsonSerialize(as = Seat.class)
 public interface SeatIF extends PointBase {
   String id();
 

@@ -1,4 +1,4 @@
-package com.hubspot.seatsolver;
+package com.hubspot.seatsolver.genetic;
 
 import java.util.Collections;
 import java.util.List;
@@ -12,9 +12,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
-import com.hubspot.seatsolver.genetic.SeatGene;
-import com.hubspot.seatsolver.genetic.TeamChromosome;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
@@ -23,19 +22,21 @@ import io.jenetics.Chromosome;
 import io.jenetics.Genotype;
 import io.jenetics.util.Factory;
 
-class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
+@Singleton
+public class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
   private final List<Seat> seats;
-  private final SeatGrid grid;
   private final List<Team> teams;
+  private final SeatGrid grid;
 
+  @Inject
   public SeatGenotypeFactory(List<Seat> seats,
-                             SeatGrid grid,
-                             List<Team> teams) {
+                             List<Team> teams,
+                             SeatGrid grid) {
     this.seats = seats;
-    this.grid = grid;
     this.teams = teams;
+    this.grid = grid;
   }
 
   @Override

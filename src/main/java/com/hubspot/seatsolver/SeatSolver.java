@@ -1,25 +1,30 @@
 package com.hubspot.seatsolver;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGene;
+import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.PointUtils;
 
@@ -36,27 +41,30 @@ import io.jenetics.engine.Limits;
 public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
-  private final List<Seat> seatList;
-  private final SeatGrid seatGrid;
+  private final List<Seat> seats;
   private final List<Team> teams;
+  private final SeatGenotypeFactory genotypeFactory;
+  private final SeatGenotypeValidator genotypeValidator;
 
-  public SeatSolver(List<Seat> seatList, List<Team> teams) {
-    this.seatList = seatList;
-    this.seatGrid = new SeatGrid(seatList);
-
+  @Inject
+  public SeatSolver(List<Seat> seats,
+                    List<Team> teams,
+                    SeatGenotypeFactory genotypeFactory,
+                    SeatGenotypeValidator genotypeValidator) {
+    this.seats = seats;
     this.teams = teams;
+    this.genotypeFactory = genotypeFactory;
+    this.genotypeValidator = genotypeValidator;
   }
 
   public void run() throws Exception {
+
     LOG.info("Building engine");
 
-    SeatGenotypeFactory factory = new SeatGenotypeFactory(seatList, seatGrid, teams);
-    SeatGenotypeValidator validator = new SeatGenotypeValidator(seatGrid);
-
-    Engine<SeatGene, Double> engine = Engine.builder(this::fitness, factory)
+    Engine<SeatGene, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
-        .genotypeValidator(validator::validateGenotype)
+        .genotypeValidator(this.genotypeValidator::validateGenotype)
         .populationSize(200)
         .survivorsSize(40)
         .maximalPhenotypeAge(20)
@@ -71,15 +79,21 @@ public class SeatSolver {
     LOG.info("Starting evolution");
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
-    AtomicReference<Genotype<SeatGene>> firstGenotype = new AtomicReference<>(null);
+    AtomicBoolean firstGenOuput = new AtomicBoolean(false);
 
     Phenotype<SeatGene, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(1, ChronoUnit.MINUTES)))
+        .limit(Limits.byExecutionTime(Duration.of(600, ChronoUnit.HOURS)))
         .limit(100000)
         .peek(r -> {
           statistics.accept(r);
-          firstGenotype.compareAndSet(null, r.getBestPhenotype().getGenotype());
+          if (firstGenOuput.compareAndSet(false, true)) {
+            try {
+              GenotypeVisualizer.outputGraphViz(r.getBestPhenotype().getGenotype(),"out/first.dot");
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
 
           LOG.info(
               "Generation {}:\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
@@ -96,23 +110,22 @@ public class SeatSolver {
     LOG.info("Finished evolving in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     System.out.println(statistics);
 
-    boolean isValidSolution = validator.validateGenotype(result.getGenotype());
+    boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
-    new GenotypeVisualizer(result.getGenotype()).outputGraphViz("out/out.dot");
-    new GenotypeVisualizer(firstGenotype.get()).outputGraphViz("out/first.dot");
+    GenotypeVisualizer.outputGraphViz(result.getGenotype(),"out/out.dot");
   }
 
   private double fitness(Genotype<SeatGene> genotype) {
     // Minimize distance between team members
-    double intraTeamDist = genotype.stream()
+    DoubleStatistics intraTeamStats = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .mapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
 
           return chromosome.meanWeightedSeatDistance();
         })
-        .sum();
+        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
     Map<String, TeamChromosome> chomosomeByTeam = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
@@ -120,7 +133,7 @@ public class SeatSolver {
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
     // Minimize requested adjacent team distance
-    double weightedAdjacencyScores = genotype.stream()
+    DoubleStatistics adjacencyStats = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .flatMapToDouble(seatGenes -> {
           TeamChromosome chromosome = ((TeamChromosome) seatGenes);
@@ -135,9 +148,11 @@ public class SeatSolver {
                 return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
               });
         })
-        .sum();
+        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
-     return weightedAdjacencyScores + intraTeamDist;
+    double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
+    double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
+    return (intraTeamScaled / 2) + adjacencyScaled;
   }
 
   public static void main(String[] args) throws Exception {
@@ -145,12 +160,12 @@ public class SeatSolver {
     HubspotDataLoader dataLoader = new HubspotDataLoader("data/data.json");
     dataLoader.load();
 
-    new SeatSolver(dataLoader.getSeats(), dataLoader.getTeams()).run();
-  }
+    LOG.info("Creating injector");
+    Injector i = Guice.createInjector(new SeatSolverModule(dataLoader));
 
-  public static double percentile(List<Double> values, double percentile) {
-    List<Double> sorted = values.stream().sorted().collect(Collectors.toList());
-    int idx = (int) Math.ceil((percentile / (double)100) * (double)sorted.size());
-    return sorted.get(idx-1);
+    LOG.info("Running optimizer");
+    i.getInstance(SeatSolver.class).run();;
+
+    LOG.info("Optimization complete");
   }
 }

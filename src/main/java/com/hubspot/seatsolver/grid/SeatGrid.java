@@ -5,31 +5,32 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.github.varunpant.quadtree.QuadTree;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.Seat;
 
+@Singleton
 public class SeatGrid {
   private static final int MAX_ADJ_OFFSET = 60;
   private static final int SEAT_WIDTH = 12;
   private static final int SEAT_HEIGHT = 14;
 
-  private final Map<Double, Map<Double, Seat>> seatGrid;
   private final QuadTree<Seat> seatQuadTree;
   private final SetMultimap<Seat, Seat> adjacencyMap;
   private final double gridSizeX;
   private final double gridSizeY;
   private final int size;
 
+  @Inject
   public SeatGrid(List<Seat> seats) {
     this.size = seats.size();
     HashMap<Double, HashMap<Double, Seat>> grid = new HashMap<>();
@@ -51,12 +52,6 @@ public class SeatGrid {
       }
     }
 
-    HashMap<Double, ImmutableMap<Double, Seat>> immutableColMap = new HashMap<>();
-    grid.entrySet().forEach(entry -> {
-      immutableColMap.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue()));
-    });
-
-    this.seatGrid = ImmutableMap.copyOf(immutableColMap);
 
     this.gridSizeX = maxX;
     this.gridSizeY = maxY;

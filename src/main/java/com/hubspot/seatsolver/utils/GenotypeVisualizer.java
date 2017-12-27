@@ -31,19 +31,13 @@ public class GenotypeVisualizer {
   private static final SVG[] COLORS = EnumSet.of(SVG.blue, SVG.cornflowerblue, SVG.lightcoral, SVG.burlywood, SVG.chocolate, SVG.deeppink, SVG.blueviolet, SVG.green, SVG.greenyellow, SVG.darkgreen, SVG.indigo, SVG.dodgerblue, SVG.goldenrod, SVG.crimson, SVG.orangered, SVG.lightseagreen, SVG.lightsalmon, SVG.plum, SVG.gold, SVG.red, SVG.blue, SVG.yellow, SVG.limegreen).toArray(new SVG[]{});
   private static final int N_COLORS = COLORS.length - 1;
 
-  private final Genotype<SeatGene> genotype;
-
-  public GenotypeVisualizer(Genotype<SeatGene> genotype) {
-    this.genotype = genotype;
-  }
-
-  public void outputGraphViz(String filename) throws IOException {
+  public static void outputGraphViz(Genotype<SeatGene> genotype, String filename) throws IOException {
     Graph g = new Graph().setType(GraphType.graph);
 
     List<Node> nodes = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
-        .flatMap(this::chromosomeToNodes)
+        .flatMap(GenotypeVisualizer::chromosomeToNodes)
         .collect(Collectors.toList());
 
     List<Node> emptyNodes = genotype.stream()
@@ -64,7 +58,7 @@ public class GenotypeVisualizer {
     }
   }
 
-  private Stream<Node> chromosomeToNodes(TeamChromosome chromosome) {
+  private static Stream<Node> chromosomeToNodes(TeamChromosome chromosome) {
     List<Node> results = Lists.newArrayList(chromosomeToNode(chromosome));
 
     results.addAll(chromosome.stream()
@@ -75,7 +69,7 @@ public class GenotypeVisualizer {
     return results.stream();
   }
 
-  private Node chromosomeToNode(TeamChromosome chromosome) {
+  private static Node chromosomeToNode(TeamChromosome chromosome) {
     Team team = chromosome.getTeam();
     SVG color = colorForTeam(chromosome.getTeam().id());
 
@@ -91,14 +85,14 @@ public class GenotypeVisualizer {
         .setPos(pos);
   }
 
-  private Node geneToNode(String team, SeatGene gene) {
+  private static Node geneToNode(String team, SeatGene gene) {
     SVG color = colorForTeam(team);
     Seat seat = gene.getSeat();
 
     return seatToNode(seat, color);
   }
 
-  private Node seatToNode(Seat seat, SVG color) {
+  private static Node seatToNode(Seat seat, SVG color) {
     String pos = String.format("%d,%d", ((int) seat.x()), ((int) seat.y()));
 
     Node node = new Node(seat.id())
@@ -112,7 +106,7 @@ public class GenotypeVisualizer {
     return node;
   }
 
-  private SVG colorForTeam(String team) {
+  private static SVG colorForTeam(String team) {
     int colorIdx = Math.abs(HASH.hashString(team, StandardCharsets.UTF_8).asInt()) % N_COLORS;
     return COLORS[colorIdx];
   }
