@@ -1,5 +1,7 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Point;
+import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.PointUtils;
@@ -84,14 +87,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   public Point centroid() {
-    // mean of pairwise distances
-    double sumX = toSeq().stream().mapToDouble(gene -> gene.getAllele().x()).sum();
-    double sumY = toSeq().stream().mapToDouble(gene -> gene.getAllele().y()).sum();
-
-    double x = sumX / length();
-    double y = sumY / length();
-
-    return Point.builder().x(x).y(y).build();
+    return centroid(toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet()));
   }
 
   @Override
@@ -197,13 +193,25 @@ public class TeamChromosome extends AbstractSeatChromosome {
       return Optional.empty();
     }
 
-    int idx = RandomRegistry.getRandom().nextInt(availableAdjacent.size());
-    return Optional.of(availableAdjacent.get(idx));
+    Point center = centroid(existing);
+    // Get the nearest
+    return availableAdjacent.stream()
+        .min(Comparator.comparing(seat -> PointUtils.distance(seat, center)));
   }
 
   @Override
   public String getIdentifier() {
     return team.id();
+  }
+
+  private static Point centroid(Collection<? extends PointBase> points) {
+    double sumX = points.stream().mapToDouble(PointBase::x).sum();
+    double sumY = points.stream().mapToDouble(PointBase::y).sum();
+
+    double x = sumX / points.size();
+    double y = sumY / points.size();
+
+    return Point.builder().x(x).y(y).build();
   }
 
 }

@@ -31,9 +31,9 @@ import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
+import io.jenetics.Mutator;
 import io.jenetics.PartiallyMatchedCrossover;
 import io.jenetics.Phenotype;
-import io.jenetics.SwapMutator;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
@@ -77,7 +77,7 @@ public class SeatSolver {
         .maximalPhenotypeAge(20)
         .alterers(
             new PartiallyMatchedCrossover<>(.2),
-            new SwapMutator<>()
+            new Mutator<>(.05)
         )
         .build();
 
