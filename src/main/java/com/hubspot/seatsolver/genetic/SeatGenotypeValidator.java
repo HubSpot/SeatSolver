@@ -14,6 +14,7 @@ import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
 
 import io.jenetics.Chromosome;
+import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 
 public class SeatGenotypeValidator {
@@ -26,25 +27,25 @@ public class SeatGenotypeValidator {
     this.grid = grid;
   }
 
-  public boolean validateGenotype(Genotype<SeatGene> genotype) {
+  public boolean validateGenotype(Genotype<EnumGene<Seat>> genotype) {
     LOG.trace("Validating genotype: {}", genotype);
 
     Set<String> chosen = new HashSet<>();
     Set<String> empty = new HashSet<>();
-    for (Chromosome<SeatGene> chromosome : genotype) {
+    for (Chromosome<EnumGene<Seat>> chromosome : genotype) {
       if (chromosome instanceof EmptySeatChromosome) {
         empty.addAll(chromosome.stream()
-            .map(gene -> gene.getSeat().id())
+            .map(gene -> gene.getAllele().id())
             .collect(Collectors.toSet())
         );
       }
 
-      for (SeatGene gene : chromosome) {
-        if (chosen.contains(gene.getSeat().id())) {
+      for (EnumGene<Seat> gene : chromosome) {
+        if (chosen.contains(gene.getAllele().id())) {
           return false;
         }
 
-        chosen.add(gene.getSeat().id());
+        chosen.add(gene.getAllele().id());
       }
     }
 
@@ -53,13 +54,13 @@ public class SeatGenotypeValidator {
     }
 
     // now do adjacency
-    for (Chromosome<SeatGene> chromosome : genotype) {
+    for (Chromosome<EnumGene<Seat>> chromosome : genotype) {
       if (chromosome.length() == 1 || chromosome instanceof EmptySeatChromosome) {
         continue;
       }
 
       Set<Seat> seats = chromosome.stream()
-          .map(SeatGene::getSeat)
+          .map(EnumGene::getAllele)
           .collect(Collectors.toSet());
 
       Seat start = seats.iterator().next();

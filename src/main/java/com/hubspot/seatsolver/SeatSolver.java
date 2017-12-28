@@ -17,10 +17,10 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
-import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
+import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapCrossoverFactory;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
@@ -29,11 +29,11 @@ import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.GenotypeWriter;
 import com.hubspot.seatsolver.utils.PointUtils;
 
+import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
-import io.jenetics.MultiPointCrossover;
+import io.jenetics.PartiallyMatchedCrossover;
 import io.jenetics.Phenotype;
 import io.jenetics.SwapMutator;
-import io.jenetics.UniformCrossover;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
@@ -47,35 +47,37 @@ public class SeatSolver {
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
+  private final SeatSwapCrossoverFactory crossoverFactory;
 
   @Inject
   public SeatSolver(List<Seat> seats,
                     List<Team> teams,
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
-                    GenotypeWriter genotypeWriter) {
+                    GenotypeWriter genotypeWriter,
+                    SeatSwapCrossoverFactory crossoverFactory) {
     this.seats = seats;
     this.teams = teams;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;
+    this.crossoverFactory = crossoverFactory;
   }
 
   public void run() throws Exception {
 
     LOG.info("Building engine");
 
-    Engine<SeatGene, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
+    Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
-        .populationSize(200)
-        .survivorsSize(40)
+        .populationSize(500)
+        .survivorsSize(50)
         .maximalPhenotypeAge(20)
         .alterers(
-            new SwapMutator<>(.2),
-            new MultiPointCrossover<>(.3, 4),
-            new UniformCrossover<>(.4, .3)
+            new PartiallyMatchedCrossover<>(.2),
+            new SwapMutator<>()
         )
         .build();
 
@@ -85,9 +87,9 @@ public class SeatSolver {
 
     AtomicBoolean firstGenOuput = new AtomicBoolean(false);
 
-    Phenotype<SeatGene, Double> result = engine.stream()
+    Phenotype<EnumGene<Seat>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(1, ChronoUnit.HOURS)))
+        .limit(Limits.byExecutionTime(Duration.of(6, ChronoUnit.HOURS)))
         .limit(100000)
         .peek(r -> {
           statistics.accept(r);
@@ -121,7 +123,7 @@ public class SeatSolver {
     GenotypeVisualizer.outputGraphViz(result.getGenotype(),"out/out.dot");
   }
 
-  private double fitness(Genotype<SeatGene> genotype) {
+  private double fitness(Genotype<EnumGene<Seat>> genotype) {
     // Minimize distance between team members
     DoubleStatistics intraTeamStats = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
@@ -132,7 +134,7 @@ public class SeatSolver {
         })
         .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
-    Map<String, TeamChromosome> chomosomeByTeam = genotype.stream()
+    Map<String, TeamChromosome> chromosomeByTeam = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
@@ -145,7 +147,7 @@ public class SeatSolver {
 
           return chromosome.getTeam().wantsAdjacent().stream()
               .mapToDouble(adj -> {
-                TeamChromosome other = chomosomeByTeam.get(adj.id());
+                TeamChromosome other = chromosomeByTeam.get(adj.id());
                 if (other == null) {
                   return ((double) 0);
                 }

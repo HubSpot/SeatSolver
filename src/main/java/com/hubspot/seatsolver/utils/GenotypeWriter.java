@@ -9,12 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
-import com.hubspot.seatsolver.genetic.SeatGene;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.TeamAssignment;
 
 import io.jenetics.Chromosome;
+import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 
 @Singleton
@@ -26,7 +26,7 @@ public class GenotypeWriter {
     this.objectMapper = objectMapper;
   }
 
-  public void write(Genotype<SeatGene> genotype, String filename) throws IOException {
+  public void write(Genotype<EnumGene<Seat>> genotype, String filename) throws IOException {
     try (FileWriter writer = new FileWriter(filename)) {
       List<TeamAssignment> assignments = genotype.stream()
           .map(c -> {
@@ -49,7 +49,7 @@ public class GenotypeWriter {
     }
   }
 
-  private static List<Seat> seatsFromChromosome(Chromosome<SeatGene> chromosome) {
-    return chromosome.stream().map(SeatGene::getSeat).collect(Collectors.toList());
+  private static List<Seat> seatsFromChromosome(Chromosome<EnumGene<Seat>> chromosome) {
+    return chromosome.stream().map(EnumGene::getAllele).collect(Collectors.toList());
   }
 }

@@ -1,6 +1,5 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -19,11 +18,12 @@ import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
 import io.jenetics.Chromosome;
+import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 import io.jenetics.util.Factory;
 
 @Singleton
-public class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
+public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
   private final List<Seat> seats;
@@ -40,7 +40,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
   }
 
   @Override
-  public Genotype<SeatGene> newInstance() {
+  public Genotype<EnumGene<Seat>> newInstance() {
     // This is a very naive algorithm, we pick a random unused seat, start there and then find the adjacent seats and make chromosome from that
     // We also randomize the direction of movement, and the previous seat from which movement starts
     // We will allow invalid solutions by simply picking an unused seat if we are boxed in
@@ -48,8 +48,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<SeatGene>> {
     LOG.debug("Starting new genotype generation");
     Set<Seat> availableSeats = Sets.newHashSet(seats);
 
-    Collections.shuffle(teams); // Random generation order every time
-    List<Chromosome<SeatGene>> chromosomes = teams.stream()
+    List<Chromosome<EnumGene<Seat>>> chromosomes = teams.stream()
         //.sorted(Comparator.comparing(Team::numMembers).reversed())
         .map(team -> chromosomeForTeam(team, availableSeats))
         .collect(Collectors.toList());

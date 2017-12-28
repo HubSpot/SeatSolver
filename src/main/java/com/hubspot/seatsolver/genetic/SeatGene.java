@@ -48,4 +48,21 @@ public class SeatGene implements Gene<Seat, SeatGene> {
         .add("seat", seat)
         .toString();
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeatGene seatGene = (SeatGene) o;
+    return java.util.Objects.equals(getSeat(), seatGene.getSeat());
+  }
+
+  @Override
+  public int hashCode() {
+    return java.util.Objects.hash(getSeat());
+  }
 }

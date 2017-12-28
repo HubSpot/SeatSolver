@@ -18,12 +18,12 @@ import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.PointUtils;
 
-import io.jenetics.AbstractChromosome;
 import io.jenetics.Chromosome;
+import io.jenetics.EnumGene;
 import io.jenetics.util.ISeq;
 import io.jenetics.util.RandomRegistry;
 
-public class TeamChromosome extends AbstractChromosome<SeatGene> {
+public class TeamChromosome extends AbstractSeatChromosome {
   private static final Logger LOG = LoggerFactory.getLogger(TeamChromosome.class);
 
   private final SeatGrid seatGrid;
@@ -36,7 +36,7 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
                         Team team) {
     super(ISeq.of(
         selectedSeats.stream()
-            .map(seat -> new SeatGene(allSeats, seat))
+            .map(seat -> EnumGene.of(allSeats.indexOf(seat), ISeq.of(allSeats)))
             .collect(Collectors.toList())
     ));
 
@@ -45,7 +45,7 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
     this.team = team;
   }
 
-  public TeamChromosome(ISeq<? extends SeatGene> genes, SeatGrid seatGrid, List<Seat> allSeats, Team team) {
+  public TeamChromosome(ISeq<? extends EnumGene<Seat>> genes, SeatGrid seatGrid, List<Seat> allSeats, Team team) {
     super(genes);
     this.seatGrid = seatGrid;
     this.allSeats = allSeats;
@@ -58,7 +58,9 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
   public double meanWeightedSeatDistance() {
     // mean of pairwise distances
-    List<Seat> seats = toSeq().stream().map(SeatGene::getSeat).collect(Collectors.toList());
+    List<Seat> seats = toSeq().stream()
+        .map(EnumGene::getAllele)
+        .collect(Collectors.toList());
 
     double totalDist = 0;
     int pairs = 0;
@@ -83,8 +85,8 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
   public Point centroid() {
     // mean of pairwise distances
-    double sumX = toSeq().stream().mapToDouble(gene -> gene.getSeat().x()).sum();
-    double sumY = toSeq().stream().mapToDouble(gene -> gene.getSeat().y()).sum();
+    double sumX = toSeq().stream().mapToDouble(gene -> gene.getAllele().x()).sum();
+    double sumY = toSeq().stream().mapToDouble(gene -> gene.getAllele().y()).sum();
 
     double x = sumX / length();
     double y = sumY / length();
@@ -93,12 +95,17 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
   }
 
   @Override
-  public Chromosome<SeatGene> newInstance(ISeq<SeatGene> genes) {
+  public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<Seat>> genes) {
     return new TeamChromosome(genes, seatGrid, allSeats, team);
   }
 
   @Override
-  public Chromosome<SeatGene> newInstance() {
+  public Chromosome<EnumGene<Seat>> newInstance(ISeq<EnumGene<Seat>> genes) {
+    return newSeatChromosome(genes);
+  }
+
+  @Override
+  public Chromosome<EnumGene<Seat>> newInstance() {
     List<Seat> selected = selectSeatBlock(seatGrid, allSeats, length());
     return new TeamChromosome(seatGrid, allSeats, selected, team);
   }
@@ -192,6 +199,11 @@ public class TeamChromosome extends AbstractChromosome<SeatGene> {
 
     int idx = RandomRegistry.getRandom().nextInt(availableAdjacent.size());
     return Optional.of(availableAdjacent.get(idx));
+  }
+
+  @Override
+  public String getIdentifier() {
+    return team.id();
   }
 
 }
