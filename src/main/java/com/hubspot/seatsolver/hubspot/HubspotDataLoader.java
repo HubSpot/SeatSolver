@@ -61,11 +61,9 @@ public class HubspotDataLoader implements DataLoader {
               double totalAdjacencyWeight = adjacencies.stream().mapToDouble(HubspotAdjacency::value).sum();
               List<Adjacency> wantsAdjacent = adjacencies.stream()
                   .map(a -> {
-                    double weight = a.value() / totalAdjacencyWeight;
-
                     return Adjacency.builder()
                         .id(a.target())
-                        .weight(weight)
+                        .weight(a.value())
                         .build();
                   })
                   .collect(Collectors.toList());

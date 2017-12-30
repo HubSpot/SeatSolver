@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -21,20 +21,23 @@ import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 import io.jenetics.util.Factory;
+import io.jenetics.util.ISeq;
 
 @Singleton
 public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
-  private final List<Seat> seats;
+  private final ISeq<Seat> seats;
+  private final Set<Seat> seatSet;
   private final List<Team> teams;
   private final SeatGrid grid;
 
   @Inject
-  public SeatGenotypeFactory(List<Seat> seats,
+  public SeatGenotypeFactory(ISeq<Seat> seats,
                              List<Team> teams,
                              SeatGrid grid) {
     this.seats = seats;
+    this.seatSet = ImmutableSet.copyOf(seats);
     this.teams = teams;
     this.grid = grid;
   }
@@ -60,11 +63,11 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
   }
 
   private TeamChromosome chromosomeForTeam(Team team, Set<Seat> remaining) {
-    List<Seat> selected = TeamChromosome.selectSeatBlock(grid, Lists.newArrayList(remaining), team.numMembers());
+    List<Seat> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
     remaining.removeAll(selected);
 
     LOG.trace("Selected {} for team {}, remaining: {}", selected, team, remaining);
 
-    return new TeamChromosome(grid, seats, selected, team);
+    return new TeamChromosome(grid, seats, seatSet, selected, team);
   }
 }

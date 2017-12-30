@@ -2,7 +2,6 @@ package com.hubspot.seatsolver.genetic;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
@@ -13,13 +12,13 @@ import io.jenetics.EnumGene;
 import io.jenetics.util.ISeq;
 
 public class EmptySeatChromosome extends AbstractSeatChromosome {
-  private final List<Seat> allSeats;
+  private final ISeq<Seat> allSeats;
 
-  public EmptySeatChromosome(Collection<Seat> seats, List<Seat> allSeats) {
+  public EmptySeatChromosome(Collection<Seat> seats, ISeq<Seat> allSeats) {
     super(
         ISeq.of(
             seats.stream()
-                .map(seat -> EnumGene.of(allSeats.indexOf(seat), ISeq.of(allSeats)))
+                .map(seat -> EnumGene.of(allSeats.indexOf(seat), allSeats))
                 .collect(Collectors.toList())
         )
     );
@@ -27,7 +26,7 @@ public class EmptySeatChromosome extends AbstractSeatChromosome {
     this.allSeats = allSeats;
   }
 
-  public EmptySeatChromosome(ISeq<? extends EnumGene<Seat>> genes, List<Seat> allSeats) {
+  public EmptySeatChromosome(ISeq<? extends EnumGene<Seat>> genes, ISeq<Seat> allSeats) {
     super(genes);
     this.allSeats = allSeats;
   }

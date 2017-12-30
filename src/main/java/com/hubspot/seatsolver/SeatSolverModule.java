@@ -14,6 +14,8 @@ import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFacto
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
+import io.jenetics.util.ISeq;
+
 public class SeatSolverModule extends AbstractModule {
 
   private final List<Seat> seats;
@@ -28,6 +30,8 @@ public class SeatSolverModule extends AbstractModule {
   protected void configure() {
     bind(new TypeLiteral<List<Seat>>(){}).toInstance(seats);
     bind(new TypeLiteral<List<Team>>(){}).toInstance(teams);
+    bind(new TypeLiteral<ISeq<Seat>>(){}).toInstance(ISeq.of(seats));
+    bind(new TypeLiteral<ISeq<Team>>(){}).toInstance(ISeq.of(teams));
 
     ObjectMapper objectMapper = new ObjectMapper()
         .registerModules(new GuavaModule(), new Jdk8Module());
