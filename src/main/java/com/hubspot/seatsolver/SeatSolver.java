@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapCrossoverFactory;
+import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
@@ -47,7 +48,7 @@ public class SeatSolver {
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
-  private final SeatSwapCrossoverFactory crossoverFactory;
+  private final SeatSwapMutatorFactory swapMutatorFactory;
 
   @Inject
   public SeatSolver(List<Seat> seats,
@@ -55,13 +56,13 @@ public class SeatSolver {
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter,
-                    SeatSwapCrossoverFactory crossoverFactory) {
+                    SeatSwapMutatorFactory swapMutatorFactory) {
     this.seats = seats;
     this.teams = teams;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;
-    this.crossoverFactory = crossoverFactory;
+    this.swapMutatorFactory = swapMutatorFactory;
   }
 
   public void run() throws Exception {
@@ -76,8 +77,9 @@ public class SeatSolver {
         .survivorsSize(50)
         .maximalPhenotypeAge(20)
         .alterers(
-            new PartiallyMatchedCrossover<>(.2),
-            new Mutator<>(.05)
+            new PartiallyMatchedCrossover<>(.1),
+            new Mutator<>(.05),
+            swapMutatorFactory.create(.05)
         )
         .build();
 
@@ -124,42 +126,39 @@ public class SeatSolver {
   }
 
   private double fitness(Genotype<EnumGene<Seat>> genotype) {
-    // Minimize distance between team members
-    DoubleStatistics intraTeamStats = genotype.stream()
-        .filter(c -> !(c instanceof EmptySeatChromosome))
-        .mapToDouble(seatGenes -> {
-          TeamChromosome chromosome = ((TeamChromosome) seatGenes);
-
-          return chromosome.meanWeightedSeatDistance();
-        })
-        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
 
     Map<String, TeamChromosome> chromosomeByTeam = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
-    // Minimize requested adjacent team distance
-    DoubleStatistics adjacencyStats = genotype.stream()
+    DoubleStatistics intraTeamStats = new DoubleStatistics();
+    DoubleStatistics adjacencyStats = new DoubleStatistics();
+
+    genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
-        .flatMapToDouble(seatGenes -> {
-          TeamChromosome chromosome = ((TeamChromosome) seatGenes);
-
-          return chromosome.getTeam().wantsAdjacent().stream()
-              .mapToDouble(adj -> {
-                TeamChromosome other = chromosomeByTeam.get(adj.id());
-                if (other == null) {
-                  return ((double) 0);
-                }
-
-                return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
-              });
-        })
-        .collect(DoubleStatistics::new, DoubleStatistics::accept, DoubleStatistics::combine);
+        .forEach(genes -> {
+          TeamChromosome chromosome = ((TeamChromosome) genes);
+          intraTeamStats.accept(chromosome.meanWeightedSeatDistance());
+          adjacencyDists(chromosome, chromosomeByTeam).forEach(adjacencyStats);
+        });
 
     double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
     double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
     return (intraTeamScaled / 2) + adjacencyScaled;
+  }
+
+  private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeam) {
+    return chromosome.getTeam().wantsAdjacent().stream()
+        .mapToDouble(adj -> {
+          TeamChromosome other = chromosomeByTeam.get(adj.id());
+          if (other == null) {
+            return ((double) 0);
+          }
+
+          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
+        })
+        .filter(d -> d > 0);
   }
 
   public static void main(String[] args) throws Exception {

@@ -47,14 +47,8 @@ public class SeatGenotypeValidator {
 
         chosen.add(gene.getAllele().id());
       }
-    }
 
-    if (chosen.size() + empty.size() < grid.size()) {
-      return false;
-    }
-
-    // now do adjacency
-    for (Chromosome<EnumGene<Seat>> chromosome : genotype) {
+      // now do adjacency
       if (chromosome.length() == 1 || chromosome instanceof EmptySeatChromosome) {
         continue;
       }
@@ -72,6 +66,10 @@ public class SeatGenotypeValidator {
         LOG.debug("Got unconnected chromosome: {}", chromosome.stream().collect(Collectors.toList()));
         return false;
       }
+    }
+
+    if (chosen.size() + empty.size() < grid.size()) {
+      return false;
     }
 
     LOG.trace("Found valid genotype: {}", genotype);

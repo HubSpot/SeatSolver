@@ -10,7 +10,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.hubspot.seatsolver.config.DataLoader;
-import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator;
+import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
@@ -34,7 +34,7 @@ public class SeatSolverModule extends AbstractModule {
     bind(ObjectMapper.class).toInstance(objectMapper);
 
     new FactoryModuleBuilder()
-        .build(SeatSwapMutator.SeatSwapCrossoverFactory.class)
+        .build(SeatSwapMutatorFactory.class)
         .configure(binder());
   }
 

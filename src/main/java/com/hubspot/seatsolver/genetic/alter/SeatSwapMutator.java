@@ -1,11 +1,11 @@
 package com.hubspot.seatsolver.genetic.alter;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -20,6 +20,7 @@ import com.google.inject.assistedinject.AssistedInject;
 import com.hubspot.seatsolver.genetic.AbstractSeatChromosome;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.utils.Pair;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
@@ -34,13 +35,13 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
   private static final Logger LOG = LoggerFactory.getLogger(SeatSwapMutator.class);
 
   private final SeatGrid seatGrid;
-  private final List<Seat> allSeats;
+  private final ISeq<Seat> allSeats;
 
   @AssistedInject
   public SeatSwapMutator(@Assisted double probability, SeatGrid seatGrid, List<Seat> allSeats) {
     super(probability);
     this.seatGrid = seatGrid;
-    this.allSeats = allSeats;
+    this.allSeats = ISeq.of(allSeats);
   }
 
   @Override
@@ -56,17 +57,24 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
       });
     });
 
-    Set<String> modified = new HashSet<>();
-    List<AbstractSeatChromosome> newChromosomes = new ArrayList<>();
-    genotype.stream().forEach(c -> {
+    Map<String, Integer> chromosomeToIndex = new HashMap<>();
+    for (int i = 0; i < genotype.length(); i++) {
+      chromosomeToIndex.put(((AbstractSeatChromosome) genotype.get(i)).getIdentifier(), i);
+    }
+
+    int modified = 0;
+    List<AbstractSeatChromosome> newChromosomes = Arrays.asList(new AbstractSeatChromosome[genotype.length()]);
+    for (int i = 0; i < genotype.length(); i++) {
       if (!(random.nextInt() < P)) {
-        return;
+        continue;
       }
 
-      AbstractSeatChromosome chromosome = ((AbstractSeatChromosome) c);
-      if (modified.contains(chromosome.getIdentifier())) {
-        return;
+      // If there is already a new chromosome, don't reprocess
+      if (newChromosomes.get(i) != null) {
+        continue;
       }
+
+      AbstractSeatChromosome chromosome = ((AbstractSeatChromosome) genotype.get(i));
 
       Set<Seat> current = chromosome.stream()
           .map(EnumGene::getAllele)
@@ -77,42 +85,48 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
           .flatMap(s -> seatGrid.getAdjacent(s).stream())
           .collect(Collectors.toSet());
 
-      List<AbstractSeatChromosome> adjacent = Sets.difference(allAdjacent, current).stream()
+      Optional<AbstractSeatChromosome> maybeToSwap = Sets.difference(allAdjacent, current).stream()
           .map(seatsToChromosome::get)
-          .distinct()
-          .collect(Collectors.toList());
+          .filter(Objects::nonNull)
+          .findFirst();
 
-      if (adjacent.size() == 0) {
-        return;
+      if (!maybeToSwap.isPresent()) {
+        continue;
       }
 
-      int toSwapIdx = RandomRegistry.getRandom().nextInt(adjacent.size());
-      AbstractSeatChromosome toSwap = adjacent.get(toSwapIdx);
-      if (modified.contains(toSwap.getIdentifier())
-          || toSwap.getIdentifier().equalsIgnoreCase(chromosome.getIdentifier())) {
-        return;
+      // Don't swap with ourselves
+      AbstractSeatChromosome toSwap = maybeToSwap.get();
+      if (toSwap.getIdentifier().equalsIgnoreCase(chromosome.getIdentifier())) {
+        continue;
       }
+
+      int toSwapIdx = chromosomeToIndex.get(toSwap.getIdentifier());
 
       LOG.trace("Swapping {} with {}", chromosome.getIdentifier(), toSwap.getIdentifier());
 
-      Set<AbstractSeatChromosome> swapped = swap(chromosome, toSwap);
-      for (AbstractSeatChromosome swappedChromosome : swapped) {
-        modified.add(swappedChromosome.getIdentifier());
-        newChromosomes.add(swappedChromosome);
-      }
-    });
-
-    for (Chromosome<EnumGene<Seat>> c : genotype) {
-      AbstractSeatChromosome chromosome = ((AbstractSeatChromosome) c);
-      if (!modified.contains(chromosome.getIdentifier())) {
-        newChromosomes.add(chromosome);
+      Optional<Pair<AbstractSeatChromosome, AbstractSeatChromosome>> maybeSwapped = swap(chromosome, toSwap);
+      if (maybeSwapped.isPresent()) {
+        modified += 2;
+        Pair<AbstractSeatChromosome, AbstractSeatChromosome> pair = maybeSwapped.get();
+        newChromosomes.set(i, pair.first());
+        newChromosomes.set(toSwapIdx, pair.second());
       }
     }
 
-    return MutatorResult.of(Genotype.of(newChromosomes), modified.size());
+    // Always return chromosomes in the same order!
+    for (int i = 0; i < genotype.length(); i++) {
+      if (newChromosomes.get(i) != null) {
+        continue;
+      }
+
+      newChromosomes.set(i, ((AbstractSeatChromosome) genotype.get(i)));
+    }
+
+    return MutatorResult.of(Genotype.of(newChromosomes), modified);
   }
 
-  private Set<AbstractSeatChromosome> swap(AbstractSeatChromosome that, AbstractSeatChromosome other) {
+  private Optional<Pair<AbstractSeatChromosome, AbstractSeatChromosome>> swap(AbstractSeatChromosome that,
+                                                                              AbstractSeatChromosome other) {
     Set<Seat> thatSet = that.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
     Set<Seat> otherSet = other.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
 
@@ -136,7 +150,7 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
     Set<Seat> otherSwappable = Sets.intersection(otherAdjacent, thatSet);
 
     if (thatSwappable.size() == 0 || otherSwappable.size() == 0) {
-      return Collections.emptySet();
+      return Optional.empty();
     }
 
     List<Seat> thatSwappableList = Lists.newArrayList(thatSwappable);
@@ -149,7 +163,7 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
 
     // Don't swap if these are the same
     if (thatSwap == otherSwap) {
-      return Collections.emptySet();
+      return Optional.empty();
     }
 
     // Find the index in the original mseq
@@ -162,26 +176,27 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
     thatList.set(thatIdx, thatSwap);
     otherList.set(otherIdx, otherSwap);
 
-    return Sets.newHashSet(
-        that.newSeatChromosome(
-            ISeq.of(
+    return Optional.of(
+        Pair.of(
+            that.newSeatChromosome(
                 thatList.stream()
-                    .map(seat -> EnumGene.of(allSeats.indexOf(seat), ISeq.of(allSeats)))
-                    .collect(Collectors.toList())
-            )
-        ),
-        other.newSeatChromosome(
-            ISeq.of(
+                    .map(seat -> EnumGene.of(allSeats.indexOf(seat), allSeats))
+                    .collect(ISeq.toISeq())
+            ),
+            other.newSeatChromosome(
                 otherList.stream()
-                    .map(seat -> EnumGene.of(allSeats.indexOf(seat), ISeq.of(allSeats)))
-                    .collect(Collectors.toList())
+                    .map(seat -> EnumGene.of(allSeats.indexOf(seat), allSeats))
+                    .collect(ISeq.toISeq()
+                    )
             )
         )
     );
   }
 
   @Override
-  protected MutatorResult<Chromosome<EnumGene<Seat>>> mutate(Chromosome<EnumGene<Seat>> chromosome, double p, Random random) {
+  protected MutatorResult<Chromosome<EnumGene<Seat>>> mutate(Chromosome<EnumGene<Seat>> chromosome,
+                                                             double p,
+                                                             Random random) {
     throw new UnsupportedOperationException();
   }
 
@@ -190,7 +205,7 @@ public class SeatSwapMutator<C extends Comparable<? super C>> extends Mutator<En
     throw new UnsupportedOperationException();
   }
 
-  public interface SeatSwapCrossoverFactory {
+  public interface SeatSwapMutatorFactory {
     SeatSwapMutator<Double> create(double probability);
   }
 }

@@ -205,8 +205,13 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   private static Point centroid(Collection<? extends PointBase> points) {
-    double sumX = points.stream().mapToDouble(PointBase::x).sum();
-    double sumY = points.stream().mapToDouble(PointBase::y).sum();
+    double sumX = 0;
+    double sumY = 0;
+
+    for (PointBase point : points) {
+      sumX += point.x();
+      sumY += point.y();
+    }
 
     double x = sumX / points.size();
     double y = sumY / points.size();
