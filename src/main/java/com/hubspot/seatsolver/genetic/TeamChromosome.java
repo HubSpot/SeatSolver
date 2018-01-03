@@ -16,6 +16,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
@@ -37,6 +38,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private final Team team;
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
+  private AtomicDouble meanWeightedSeatDist = new AtomicReference<>(null);
 
   public TeamChromosome(SeatGrid seatGrid,
                         ISeq<Seat> allSeats,
@@ -68,6 +70,16 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   public double meanWeightedSeatDistance() {
+    Double dist = meanWeightedSeatDist.get();
+    if (dist == null) {
+      dist = calculateMeanWeightedSeatDistance();
+      meanWeightedSeatDist.set(dist);
+    }
+
+    return dist;
+  }
+
+  private double calculateMeanWeightedSeatDistance() {
     // mean of pairwise distances
     List<Seat> seats = toSeq().stream()
         .map(EnumGene::getAllele)
@@ -82,7 +94,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
         }
 
         double dist = PointUtils.distance(seat, other);
-        totalDist += Math.pow(dist, 2);
+        totalDist += dist;
         pairs++;
       }
     }

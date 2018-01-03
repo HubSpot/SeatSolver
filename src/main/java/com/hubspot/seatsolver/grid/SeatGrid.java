@@ -44,7 +44,6 @@ public class SeatGrid {
       }
     }
 
-
     this.gridSizeX = maxX;
     this.gridSizeY = maxY;
 
