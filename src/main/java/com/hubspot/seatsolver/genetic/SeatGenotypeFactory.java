@@ -1,5 +1,6 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +53,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
     Set<Seat> availableSeats = Sets.newHashSet(seats);
 
     List<Chromosome<EnumGene<Seat>>> chromosomes = teams.stream()
-        //.sorted(Comparator.comparing(Team::numMembers).reversed())
+        .sorted(Comparator.comparing(Team::numMembers).reversed())
         .map(team -> chromosomeForTeam(team, availableSeats))
         .collect(Collectors.toList());
 

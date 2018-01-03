@@ -31,7 +31,7 @@ public class HubspotDataLoader implements DataLoader {
   }
 
   public void load() throws Exception {
-    FileReader reader = new FileReader("data/data.json");
+    FileReader reader = new FileReader("data/x.json");
 
     HubspotData data = objectMapper.readValue(reader, HubspotData.class);
 
@@ -51,7 +51,18 @@ public class HubspotDataLoader implements DataLoader {
         })
         .collect(Collectors.toList());
 
+    List<Seat> dav = data.floorData().get("HP").stream()
+        .map(HubspotSeat::toSeat)
+        .map(seat -> {
+          return Seat.builder().from(seat)
+              .x(seat.x() + 10000)
+              .y(seat.y() + 10000)
+              .build();
+        })
+        .collect(Collectors.toList());
+
     second.addAll(first);
+    second.addAll(dav);
     seats = second;
 
     teams = data.teamData().entrySet().stream()

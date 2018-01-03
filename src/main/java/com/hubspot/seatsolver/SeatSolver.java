@@ -22,6 +22,7 @@ import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
+import com.hubspot.seatsolver.genetic.alter.TeamSwapMutator;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
@@ -32,7 +33,6 @@ import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
-import io.jenetics.Mutator;
 import io.jenetics.PartiallyMatchedCrossover;
 import io.jenetics.Phenotype;
 import io.jenetics.engine.Engine;
@@ -75,10 +75,11 @@ public class SeatSolver {
         .genotypeValidator(this.genotypeValidator::validateGenotype)
         .populationSize(500)
         .survivorsSize(50)
-        .maximalPhenotypeAge(20)
+        .maximalPhenotypeAge(100)
         .alterers(
             new PartiallyMatchedCrossover<>(.1),
-            new Mutator<>(.05),
+            //new Mutator<>(.05),
+            new TeamSwapMutator(.1, 10),
             swapMutatorFactory.create(.05)
         )
         .build();
@@ -98,6 +99,15 @@ public class SeatSolver {
           if (firstGenOuput.compareAndSet(false, true)) {
             try {
               GenotypeVisualizer.outputGraphViz(r.getBestPhenotype().getGenotype(),"out/first.dot");
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+
+          if (r.getTotalGenerations() % 100 == 0) {
+            try {
+              GenotypeVisualizer.outputGraphViz(r.getBestPhenotype().getGenotype(), String.format("out/gen-%d.dot", r.getTotalGenerations()));
+              genotypeWriter.write(r.getBestPhenotype().getGenotype(), String.format("out/gen-%d.json", r.getTotalGenerations()));
             } catch (IOException e) {
               throw new RuntimeException(e);
             }
