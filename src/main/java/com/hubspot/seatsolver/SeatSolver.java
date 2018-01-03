@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -67,6 +67,7 @@ public class SeatSolver {
 
   public void run() throws Exception {
 
+
     LOG.info("Building engine");
 
     Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
@@ -88,29 +89,25 @@ public class SeatSolver {
     LOG.info("Starting evolution");
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
-    AtomicBoolean firstGenOuput = new AtomicBoolean(false);
+    AtomicReference<EvolutionResult<EnumGene<Seat>, Double>> currentResult = new AtomicReference<>(null);
+    Runtime.getRuntime().addShutdownHook(
+        new Thread(() -> {
+          EvolutionResult<EnumGene<Seat>, Double> result = currentResult.get();
+          if (result != null) {
+            writeGenotype(result);
+          }
+        })
+    );
 
     Phenotype<EnumGene<Seat>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(6, ChronoUnit.HOURS)))
+        .limit(Limits.byExecutionTime(Duration.of(8, ChronoUnit.HOURS)))
         .limit(100000)
         .peek(r -> {
           statistics.accept(r);
-          if (firstGenOuput.compareAndSet(false, true)) {
-            try {
-              GenotypeVisualizer.outputGraphViz(r.getBestPhenotype().getGenotype(),"out/first.dot");
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          }
 
-          if (r.getTotalGenerations() % 100 == 0) {
-            try {
-              GenotypeVisualizer.outputGraphViz(r.getBestPhenotype().getGenotype(), String.format("out/gen-%d.dot", r.getTotalGenerations()));
-              genotypeWriter.write(r.getBestPhenotype().getGenotype(), String.format("out/gen-%d.json", r.getTotalGenerations()));
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
+          if (r.getTotalGenerations() % 100 == 0 || r.getTotalGenerations() == 1) {
+            writeGenotype(r);
           }
 
           LOG.info(
@@ -132,7 +129,22 @@ public class SeatSolver {
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
     genotypeWriter.write(result.getGenotype(), "out/solution.json");
-    GenotypeVisualizer.outputGraphViz(result.getGenotype(),"out/out.dot");
+    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out.dot");
+  }
+
+  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result) {
+    try {
+      GenotypeVisualizer.outputGraphViz(
+          result.getBestPhenotype().getGenotype(),
+          String.format("out/gen-%d.dot", result.getTotalGenerations())
+      );
+      genotypeWriter.write(
+          result.getBestPhenotype().getGenotype(),
+          String.format("out/gen-%d.json", result.getTotalGenerations())
+      );
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private double fitness(Genotype<EnumGene<Seat>> genotype) {

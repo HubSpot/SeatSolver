@@ -28,7 +28,7 @@ import io.jenetics.Genotype;
 public class GenotypeVisualizer {
   private static final HashFunction HASH = Hashing.goodFastHash(8);
 
-  private static final SVG[] COLORS = EnumSet.of(SVG.blue, SVG.cornflowerblue, SVG.lightcoral, SVG.burlywood, SVG.chocolate, SVG.deeppink, SVG.blueviolet, SVG.green, SVG.greenyellow, SVG.darkgreen, SVG.indigo, SVG.dodgerblue, SVG.goldenrod, SVG.crimson, SVG.orangered, SVG.lightseagreen, SVG.lightsalmon, SVG.plum, SVG.gold, SVG.red, SVG.blue, SVG.yellow, SVG.limegreen).toArray(new SVG[]{});
+  private static final SVG[] COLORS = EnumSet.of(SVG.blue, SVG.cornflowerblue, SVG.lightcoral, SVG.burlywood, SVG.chocolate, SVG.deeppink, SVG.blueviolet, SVG.green, SVG.greenyellow, SVG.darkgreen, SVG.indigo, SVG.dodgerblue, SVG.goldenrod, SVG.crimson, SVG.orangered, SVG.lightseagreen, SVG.lightsalmon, SVG.plum, SVG.gold, SVG.red, SVG.blue, SVG.limegreen, SVG.sandybrown, SVG.mediumvioletred).toArray(new SVG[]{});
   private static final int N_COLORS = COLORS.length - 1;
 
   public static void outputGraphViz(Genotype<EnumGene<Seat>> genotype, String filename) throws IOException {
