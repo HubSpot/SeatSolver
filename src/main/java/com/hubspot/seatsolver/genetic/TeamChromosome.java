@@ -35,6 +35,8 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private final Set<Seat> allSeatsSet;
   private final Team team;
 
+  private Point centroid;
+
   public TeamChromosome(SeatGrid seatGrid,
                         ISeq<Seat> allSeats,
                         Set<Seat> allSeatsSet,

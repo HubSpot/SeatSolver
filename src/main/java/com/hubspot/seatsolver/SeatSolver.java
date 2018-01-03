@@ -22,6 +22,7 @@ import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.genetic.alter.EmptySeatSwapMutator;
+import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator.MultiTeamSwapMutatorFactory;
 import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
 import com.hubspot.seatsolver.genetic.alter.TeamSwapMutator;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
@@ -50,6 +51,7 @@ public class SeatSolver {
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
   private final SeatSwapMutatorFactory swapMutatorFactory;
+  private final MultiTeamSwapMutatorFactory multiTeamSwapMutatorFactory;
 
   @Inject
   public SeatSolver(List<Seat> seats,
@@ -57,13 +59,15 @@ public class SeatSolver {
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter,
-                    SeatSwapMutatorFactory swapMutatorFactory) {
+                    SeatSwapMutatorFactory swapMutatorFactory,
+                    MultiTeamSwapMutatorFactory multiTeamSwapMutatorFactory) {
     this.seats = seats;
     this.teams = teams;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;
     this.swapMutatorFactory = swapMutatorFactory;
+    this.multiTeamSwapMutatorFactory = multiTeamSwapMutatorFactory;
   }
 
   public void run() throws Exception {
@@ -76,14 +80,14 @@ public class SeatSolver {
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
         .populationSize(500)
-        .survivorsSize(50)
+        .survivorsSize(25)
         .maximalPhenotypeAge(100)
         .alterers(
             new PartiallyMatchedCrossover<>(.1),
             //new Mutator<>(.05),
+            multiTeamSwapMutatorFactory.create(.1, 10),
             new TeamSwapMutator(.15, 10),
-            new EmptySeatSwapMutator(.05),
-            swapMutatorFactory.create(.05)
+            new EmptySeatSwapMutator(.05)
         )
         .build();
 

@@ -10,6 +10,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.hubspot.seatsolver.config.DataLoader;
+import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator.MultiTeamSwapMutatorFactory;
 import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
@@ -39,6 +40,10 @@ public class SeatSolverModule extends AbstractModule {
 
     new FactoryModuleBuilder()
         .build(SeatSwapMutatorFactory.class)
+        .configure(binder());
+
+    new FactoryModuleBuilder()
+        .build(MultiTeamSwapMutatorFactory.class)
         .configure(binder());
   }
 
