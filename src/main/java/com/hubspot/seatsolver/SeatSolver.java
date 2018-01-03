@@ -171,8 +171,8 @@ public class SeatSolver {
           adjacencyDists(chromosome, chromosomeByTeam).forEach(adjacencyStats);
         });
 
-    double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
-    double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
+    double intraTeamScaled = intraTeamStats.getSum(); // * intraTeamStats.getStandardDeviation();
+    double adjacencyScaled = adjacencyStats.getSum(); // * adjacencyStats.getStandardDeviation();
     return (intraTeamScaled / 2) + adjacencyScaled;
   }
 
@@ -184,7 +184,7 @@ public class SeatSolver {
             return ((double) 0);
           }
 
-          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
+          return Math.pow(Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())), 1.5) * Math.pow(adj.effectiveWeight(), .5);
         })
         .filter(d -> d > 0);
   }

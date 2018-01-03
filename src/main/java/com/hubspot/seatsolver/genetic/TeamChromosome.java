@@ -82,7 +82,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
         }
 
         double dist = PointUtils.distance(seat, other);
-        totalDist += Math.pow(dist, 2);
+        totalDist += Math.pow(dist, 1.7);
         pairs++;
       }
     }
