@@ -168,7 +168,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
       }
 
       if (selected.size() < size) {
-        LOG.warn("Failed to create full seat block for {} seats", size);
+        LOG.debug("Failed to create full seat block for {} seats", size);
       }
     }
 
