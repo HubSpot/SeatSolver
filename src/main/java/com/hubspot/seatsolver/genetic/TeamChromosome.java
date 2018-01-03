@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private final Set<Seat> allSeatsSet;
   private final Team team;
 
-  private Point centroid;
+  private AtomicReference<Point> centroid = new AtomicReference<>(null);
 
   public TeamChromosome(SeatGrid seatGrid,
                         ISeq<Seat> allSeats,
@@ -94,7 +95,13 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   public Point centroid() {
-    return centroid(toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet()));
+    Point c = centroid.get();
+    if (c == null) {
+      c = centroid(toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet()));
+      centroid.set(c);
+    }
+
+    return c;
   }
 
   private List<Seat> selectSeatBlock(ISeq<Seat> availableSeats) {

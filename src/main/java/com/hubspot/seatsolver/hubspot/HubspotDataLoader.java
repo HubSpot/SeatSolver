@@ -31,7 +31,7 @@ public class HubspotDataLoader implements DataLoader {
   }
 
   public void load() throws Exception {
-    FileReader reader = new FileReader("data/x.json");
+    FileReader reader = new FileReader("data/data.json");
 
     HubspotData data = objectMapper.readValue(reader, HubspotData.class);
 
