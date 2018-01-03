@@ -83,11 +83,11 @@ public class SeatSolver {
         .survivorsSize(25)
         .maximalPhenotypeAge(100)
         .alterers(
-            new PartiallyMatchedCrossover<>(.1),
+            new PartiallyMatchedCrossover<>(.15),
             //new Mutator<>(.05),
-            multiTeamSwapMutatorFactory.create(.1, 10),
-            new TeamSwapMutator(.15, 10),
-            new EmptySeatSwapMutator(.05)
+            multiTeamSwapMutatorFactory.create(.2, 10),
+            new TeamSwapMutator(.1, 10),
+            new EmptySeatSwapMutator(.2)
         )
         .build();
 
