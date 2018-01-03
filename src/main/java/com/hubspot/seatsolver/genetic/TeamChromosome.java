@@ -95,9 +95,17 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return centroid(toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet()));
   }
 
+  private List<Seat> selectSeatBlock(ISeq<Seat> availableSeats) {
+    return selectSeatBlock(seatGrid, availableSeats, length());
+  }
+
   @Override
   public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<Seat>> genes) {
     return new TeamChromosome(genes, seatGrid, allSeats, team);
+  }
+
+  public TeamChromosome newTeamChromosome(ISeq<Seat> available) {
+    return new TeamChromosome(seatGrid, allSeats, allSeatsSet, selectSeatBlock(available), team);
   }
 
   @Override
@@ -120,16 +128,21 @@ public class TeamChromosome extends AbstractSeatChromosome {
         .toString();
   }
 
+
   private static final int MAX_SEAT_ATTEMPTS = 100;
   private static final int MAX_BLOCK_ATTEMPTS = 100;
   private static final int MAX_FILL_ATTEMPTS = 100;
+
+  public static List<Seat> selectSeatBlock(SeatGrid grid, ISeq<Seat> availableSeats, int size) {
+    return selectSeatBlock(grid, availableSeats, Sets.newHashSet(availableSeats), size);
+  }
 
   public static List<Seat> selectSeatBlock(SeatGrid grid, ISeq<Seat> availableSeats, Set<Seat> availableSeatSet, int size) {
     List<Seat> selected = selectBlock(grid, availableSeats, availableSeatSet, size);
 
     Set<Seat> selectedSet = new HashSet<>(selected);
     if (selected.size() < size) {
-      LOG.warn(String.format("Could not find enough adjacent seats for team of size %d", size));
+      LOG.debug("Could not find enough adjacent seats for team of size {}", size);
       // fill with random seats now, this will not be valid
       int fillAttempts = 0;
       while (selected.size() < size && fillAttempts < MAX_FILL_ATTEMPTS) {

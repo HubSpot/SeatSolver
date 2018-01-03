@@ -21,6 +21,7 @@ import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
+import com.hubspot.seatsolver.genetic.alter.EmptySeatSwapMutator;
 import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
 import com.hubspot.seatsolver.genetic.alter.TeamSwapMutator;
 import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
@@ -80,7 +81,8 @@ public class SeatSolver {
         .alterers(
             new PartiallyMatchedCrossover<>(.1),
             //new Mutator<>(.05),
-            new TeamSwapMutator(.1, 10),
+            new TeamSwapMutator(.15, 10),
+            new EmptySeatSwapMutator(.05),
             swapMutatorFactory.create(.05)
         )
         .build();
