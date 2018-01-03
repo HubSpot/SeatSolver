@@ -2,7 +2,6 @@ package com.hubspot.seatsolver.grid;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,16 +32,9 @@ public class SeatGrid {
   @Inject
   public SeatGrid(List<Seat> seats) {
     this.size = seats.size();
-    HashMap<Double, HashMap<Double, Seat>> grid = new HashMap<>();
-
     double maxX = 0;
     double maxY = 0;
     for (Seat seat : seats) {
-      HashMap<Double, Seat> col = grid.getOrDefault(seat.x(), new HashMap<>());
-      col.put(seat.y(), seat);
-
-      grid.put(seat.x(), col);
-
       if (seat.x() > maxX) {
         maxX = seat.x();
       }
