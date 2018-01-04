@@ -26,11 +26,14 @@ public interface AdjacencyIF {
   ImmutableMap<String, Double> WEIGHT_BY_TYPE = ImmutableMap.of(
       "levenshtein", 0.5,
       "techLead", 3.,
+      "productLead", 1.,
+      "team-affinity", 5.,
       "productManagers", 2.
   );
 
   @Value.Auxiliary
   default double effectiveWeight() {
-    return WEIGHT_BY_TYPE.getOrDefault(type().orElse(null), 1.0) * weight();
+    return WEIGHT_BY_TYPE.getOrDefault(type().orElse(null), 1.0) *
+        Math.pow(weight(), 2.);
   }
 }

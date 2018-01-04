@@ -75,8 +75,8 @@ public class SeatSolver {
 
   public void run() throws Exception {
 
-
-    LOG.info("Building engine");
+    long run =  System.currentTimeMillis();
+    LOG.info("Building engine - Run {}", run);
 
     ForkJoinPool forkJoinPool = ForkJoinPool.commonPool();
     if (System.getProperty("population.filter.parallelism") != null) {
@@ -110,7 +110,7 @@ public class SeatSolver {
         new Thread(() -> {
           EvolutionResult<EnumGene<Seat>, Double> result = currentResult.get();
           if (result != null) {
-            writeGenotype(result);
+            writeGenotype(result, run);
           }
         })
     );
@@ -124,7 +124,7 @@ public class SeatSolver {
           statistics.accept(r);
 
           if (r.getTotalGenerations() % 100 == 0 || r.getTotalGenerations() == 1) {
-            writeGenotype(r);
+            writeGenotype(r, run);
           }
 
           LOG.info(
@@ -147,19 +147,19 @@ public class SeatSolver {
     boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
-    genotypeWriter.write(result.getGenotype(), "out/solution.json");
-    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out.dot");
+    genotypeWriter.write(result.getGenotype(), "out/solution-" + run + ".json");
+    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out-" + run + ".dot");
   }
 
-  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result) {
+  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result, long run) {
     try {
       GenotypeVisualizer.outputGraphViz(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%06d.dot", result.getTotalGenerations())
+          String.format("out/run-%d-gen-%06d.dot", run, result.getTotalGenerations())
       );
       genotypeWriter.write(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%06d.json", result.getTotalGenerations())
+          String.format("out/run-%d-gen-%06d.json", run, result.getTotalGenerations())
       );
     } catch (IOException e) {
       throw new RuntimeException(e);

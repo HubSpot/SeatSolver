@@ -73,6 +73,7 @@ public class HubspotDataLoader implements DataLoader {
                     return Adjacency.builder()
                         .id(a.target())
                         .weight(a.value())
+                        .type(a.type())
                         .build();
                   })
                   .collect(Collectors.toList());
