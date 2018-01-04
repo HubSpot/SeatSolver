@@ -43,12 +43,10 @@ public class HubspotDataLoader implements DataLoader {
 
     List<Seat> first = data.floorData().get("2c1").stream()
         .map(HubspotSeat::toSeat)
-        .map(seat -> {
-          return Seat.builder().from(seat)
-              .x(seat.x() + 1000)
-              .y(seat.y() + 1000)
-              .build();
-        })
+        .map(seat -> Seat.builder().from(seat)
+            .x(seat.x() + 1000)
+            .y(seat.y() + 1000)
+            .build())
         .collect(Collectors.toList());
 
     List<Seat> dav = data.floorData().get("HP").stream()
@@ -75,6 +73,7 @@ public class HubspotDataLoader implements DataLoader {
                     return Adjacency.builder()
                         .id(a.target())
                         .weight(a.value())
+                        .type(a.type())
                         .build();
                   })
                   .collect(Collectors.toList());

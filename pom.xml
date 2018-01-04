@@ -15,6 +15,7 @@
 
   <properties>
     <project.build.targetJdk>1.8</project.build.targetJdk>
+    <koloboke.version>0.6.8</koloboke.version>
   </properties>
 
   <dependencyManagement>
@@ -27,7 +28,7 @@
       <dependency>
         <groupId>io.jenetics</groupId>
         <artifactId>jenetics</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.0-hs-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>info.leadinglight</groupId>
@@ -43,6 +44,17 @@
         <groupId>org.immutables</groupId>
         <artifactId>value</artifactId>
         <version>2.2.10</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>koloboke-api-jdk8</artifactId>
+        <version>${koloboke.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>koloboke-impl-jdk8</artifactId>
+        <version>${koloboke.version}</version>
+        <scope>runtime</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -112,6 +124,14 @@
     <dependency>
       <groupId>Quadtree</groupId>
       <artifactId>Quadtree</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>koloboke-api-jdk8</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>koloboke-impl-jdk8</artifactId>
     </dependency>
   </dependencies>
 

@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -40,6 +42,7 @@ import io.jenetics.Phenotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
+import io.jenetics.engine.ForkJoinPopulationFilter;
 import io.jenetics.engine.Limits;
 
 public class SeatSolver {
@@ -72,15 +75,22 @@ public class SeatSolver {
 
   public void run() throws Exception {
 
+    long run =  System.currentTimeMillis();
+    LOG.info("Building engine - Run {}", run);
 
-    LOG.info("Building engine");
+    ForkJoinPool forkJoinPool = ForkJoinPool.commonPool();
+    if (System.getProperty("population.filter.parallelism") != null) {
+      forkJoinPool = new ForkJoinPool(Integer.valueOf(System.getProperty("population.filter.parallelism")));
+    }
 
     Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
-        .populationSize(500)
-        .survivorsSize(25)
+        .populationSize(1500)
+        .survivorsSize(100)
+        .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 42))
+        .executor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()))
         .maximalPhenotypeAge(100)
         .alterers(
             new PartiallyMatchedCrossover<>(.15),
@@ -100,10 +110,11 @@ public class SeatSolver {
         new Thread(() -> {
           EvolutionResult<EnumGene<Seat>, Double> result = currentResult.get();
           if (result != null) {
-            writeGenotype(result);
+            writeGenotype(result, run);
           }
         })
     );
+
 
     Phenotype<EnumGene<Seat>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
@@ -113,18 +124,20 @@ public class SeatSolver {
           statistics.accept(r);
 
           if (r.getTotalGenerations() % 100 == 0 || r.getTotalGenerations() == 1) {
-            writeGenotype(r);
+            writeGenotype(r, run);
           }
 
           LOG.info(
-              "Generation {}:\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
+              "Generation {} ({} ms/gen):\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
               r.getGeneration(),
+              stopwatch.elapsed(TimeUnit.MILLISECONDS) / r.getTotalGenerations(),
               r.getInvalidCount(),
               r.getKillCount(),
               r.getWorstFitness(),
               r.getBestFitness()
           );
-          LOG.debug("Got intermediate result genotype: {}", r.getBestPhenotype());
+          LOG.debug("Got intermediate result genotype: {}",
+              r.getBestPhenotype());
         })
         .collect(EvolutionResult.toBestPhenotype());
 
@@ -134,19 +147,19 @@ public class SeatSolver {
     boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
-    genotypeWriter.write(result.getGenotype(), "out/solution.json");
-    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out.dot");
+    genotypeWriter.write(result.getGenotype(), "out/solution-" + run + ".json");
+    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out-" + run + ".dot");
   }
 
-  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result) {
+  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result, long run) {
     try {
       GenotypeVisualizer.outputGraphViz(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%d.dot", result.getTotalGenerations())
+          String.format("out/run-%d-gen-%06d.dot", run, result.getTotalGenerations())
       );
       genotypeWriter.write(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%d.json", result.getTotalGenerations())
+          String.format("out/run-%d-gen-%06d.json", run, result.getTotalGenerations())
       );
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -184,7 +197,7 @@ public class SeatSolver {
             return ((double) 0);
           }
 
-          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.weight();
+          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
         })
         .filter(d -> d > 0);
   }
