@@ -24,7 +24,9 @@ public interface AdjacencyIF {
   double weight();
 
   ImmutableMap<String, Double> WEIGHT_BY_TYPE = ImmutableMap.of(
-      "levenshtein", 0.2
+      "levenshtein", 0.5,
+      "techLead", 3.,
+      "productManagers", 2.
   );
 
   @Value.Auxiliary

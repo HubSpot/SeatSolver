@@ -89,7 +89,7 @@ public class SeatSolver {
         .genotypeValidator(this.genotypeValidator::validateGenotype)
         .populationSize(1500)
         .survivorsSize(100)
-        .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 32))
+        .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 42))
         .executor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()))
         .maximalPhenotypeAge(100)
         .alterers(
@@ -184,8 +184,8 @@ public class SeatSolver {
           adjacencyDists(chromosome, chromosomeByTeam).forEach(adjacencyStats);
         });
 
-    double intraTeamScaled = intraTeamStats.getSum(); // * intraTeamStats.getStandardDeviation();
-    double adjacencyScaled = adjacencyStats.getSum(); // * adjacencyStats.getStandardDeviation();
+    double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
+    double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
     return (intraTeamScaled / 2) + adjacencyScaled;
   }
 
@@ -197,7 +197,7 @@ public class SeatSolver {
             return ((double) 0);
           }
 
-          return Math.pow(Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())), 1.5) * Math.pow(adj.effectiveWeight(), .5);
+          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
         })
         .filter(d -> d > 0);
   }

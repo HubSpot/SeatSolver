@@ -1,8 +1,8 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,7 +38,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private final Team team;
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
-  private AtomicDouble meanWeightedSeatDist = new AtomicReference<>(null);
+  private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
 
   public TeamChromosome(SeatGrid seatGrid,
                         ISeq<Seat> allSeats,
@@ -71,7 +71,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   public double meanWeightedSeatDistance() {
     Double dist = meanWeightedSeatDist.get();
-    if (dist == null) {
+    if (dist < 0) {
       dist = calculateMeanWeightedSeatDistance();
       meanWeightedSeatDist.set(dist);
     }
@@ -94,7 +94,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
         }
 
         double dist = PointUtils.distance(seat, other);
-        totalDist += Math.pow(dist, 1.7);
+        totalDist += dist;
         pairs++;
       }
     }
@@ -109,10 +109,9 @@ public class TeamChromosome extends AbstractSeatChromosome {
   public Point centroid() {
     Point c = centroid.get();
     if (c == null) {
-      c = centroid(toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet()));
+      c = centroid(toSeq().stream().map(EnumGene::getAllele).iterator());
       centroid.set(c);
     }
-
     return c;
   }
 
@@ -230,7 +229,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
       return Optional.empty();
     }
 
-    Point center = centroid(existing);
+    Point center = centroid(existing.iterator());
     // Get the nearest
     return availableAdjacent.stream()
         .min(Comparator.comparing(seat -> PointUtils.distance(seat, center)));
@@ -241,17 +240,21 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return team.id();
   }
 
-  private static Point centroid(Collection<? extends PointBase> points) {
+  private static Point centroid(Iterator<? extends PointBase> points) {
     double sumX = 0;
     double sumY = 0;
 
-    for (PointBase point : points) {
-      sumX += point.x();
-      sumY += point.y();
+    int count = 0;
+
+    while (points.hasNext()) {
+      PointBase point = points.next();
+        sumX += point.x();
+        sumY += point.y();
+        ++count;
     }
 
-    double x = sumX / points.size();
-    double y = sumY / points.size();
+    double x = sumX / count;
+    double y = sumY / count;
 
     return Point.builder().x(x).y(y).build();
   }

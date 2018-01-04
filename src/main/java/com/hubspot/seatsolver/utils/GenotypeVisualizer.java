@@ -107,7 +107,7 @@ public class GenotypeVisualizer {
   }
 
   private static SVG colorForTeam(String team) {
-    int colorIdx = Math.abs(HASH.hashString(team, StandardCharsets.UTF_8).asInt()) % N_COLORS;
+    int colorIdx = Math.abs(HASH.hashString(team, StandardCharsets.UTF_8).asInt() % N_COLORS);
     return COLORS[colorIdx];
   }
 }
