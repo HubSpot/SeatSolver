@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -40,6 +42,7 @@ import io.jenetics.Phenotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
+import io.jenetics.engine.ForkJoinPopulationFilter;
 import io.jenetics.engine.Limits;
 
 public class SeatSolver {
@@ -75,12 +78,19 @@ public class SeatSolver {
 
     LOG.info("Building engine");
 
+    ForkJoinPool forkJoinPool = ForkJoinPool.commonPool();
+    if (System.getProperty("population.filter.parallelism") != null) {
+      forkJoinPool = new ForkJoinPool(Integer.valueOf(System.getProperty("population.filter.parallelism")));
+    }
+
     Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
-        .populationSize(500)
-        .survivorsSize(25)
+        .populationSize(1500)
+        .survivorsSize(100)
+        .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 32))
+        .executor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()))
         .maximalPhenotypeAge(100)
         .alterers(
             new PartiallyMatchedCrossover<>(.15),
@@ -105,6 +115,7 @@ public class SeatSolver {
         })
     );
 
+
     Phenotype<EnumGene<Seat>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
         .limit(Limits.byExecutionTime(Duration.of(8, ChronoUnit.HOURS)))
@@ -117,14 +128,16 @@ public class SeatSolver {
           }
 
           LOG.info(
-              "Generation {}:\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
+              "Generation {} ({} ms/gen):\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
               r.getGeneration(),
+              stopwatch.elapsed(TimeUnit.MILLISECONDS) / r.getTotalGenerations(),
               r.getInvalidCount(),
               r.getKillCount(),
               r.getWorstFitness(),
               r.getBestFitness()
           );
-          LOG.debug("Got intermediate result genotype: {}", r.getBestPhenotype());
+          LOG.debug("Got intermediate result genotype: {}",
+              r.getBestPhenotype());
         })
         .collect(EvolutionResult.toBestPhenotype());
 
@@ -142,11 +155,11 @@ public class SeatSolver {
     try {
       GenotypeVisualizer.outputGraphViz(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%d.dot", result.getTotalGenerations())
+          String.format("out/gen-%06d.dot", result.getTotalGenerations())
       );
       genotypeWriter.write(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/gen-%d.json", result.getTotalGenerations())
+          String.format("out/gen-%06d.json", result.getTotalGenerations())
       );
     } catch (IOException e) {
       throw new RuntimeException(e);

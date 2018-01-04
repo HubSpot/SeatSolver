@@ -1,5 +1,7 @@
 package com.hubspot.seatsolver.model;
 
+import java.util.Optional;
+
 import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
@@ -18,7 +20,7 @@ import com.google.common.collect.ImmutableMap;
 public interface AdjacencyIF {
 
   String id();
-  String name();
+  Optional<String> type();
   double weight();
 
   ImmutableMap<String, Double> WEIGHT_BY_TYPE = ImmutableMap.of(
@@ -27,6 +29,6 @@ public interface AdjacencyIF {
 
   @Value.Auxiliary
   default double effectiveWeight() {
-    return WEIGHT_BY_TYPE.getOrDefault(name(), 1.0) * weight();
+    return WEIGHT_BY_TYPE.getOrDefault(type().orElse(null), 1.0) * weight();
   }
 }

@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Seat;
@@ -16,6 +15,8 @@ import com.hubspot.seatsolver.model.Seat;
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
+import net.openhft.koloboke.collect.set.hash.HashObjSet;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 public class SeatGenotypeValidator {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeValidator.class);
@@ -30,14 +31,13 @@ public class SeatGenotypeValidator {
   public boolean validateGenotype(Genotype<EnumGene<Seat>> genotype) {
     LOG.trace("Validating genotype: {}", genotype);
 
-    Set<String> chosen = new HashSet<>();
-    Set<String> empty = new HashSet<>();
+    HashObjSet<String> chosen = HashObjSets.getDefaultFactory().newMutableSet();
+    HashObjSet<String> empty = HashObjSets.getDefaultFactory().newMutableSet();
     for (Chromosome<EnumGene<Seat>> chromosome : genotype) {
       if (chromosome instanceof EmptySeatChromosome) {
-        empty.addAll(chromosome.stream()
+        chromosome.stream()
             .map(gene -> gene.getAllele().id())
-            .collect(Collectors.toSet())
-        );
+            .forEach(empty::add);
       }
 
       for (EnumGene<Seat> gene : chromosome) {
@@ -53,9 +53,9 @@ public class SeatGenotypeValidator {
         continue;
       }
 
-      Set<Seat> seats = chromosome.stream()
+      HashObjSet<Seat> seats = chromosome.stream()
           .map(EnumGene::getAllele)
-          .collect(Collectors.toSet());
+          .collect(Collectors.toCollection(HashObjSets.getDefaultFactory()::newMutableSet));
 
       Seat start = seats.iterator().next();
 
@@ -82,16 +82,16 @@ public class SeatGenotypeValidator {
       return Collections.emptySet();
     }
 
-    Set<Seat> toFindMinusSelf = new HashSet<>(toFind);
+    HashObjSet<Seat> toFindMinusSelf = HashObjSets.newMutableSet(toFind);
     toFindMinusSelf.remove(seat);
 
-    Set<Seat> adjacentSeats = Sets.newHashSet(grid.getAdjacent(seat));
+    Set<Seat> adjacentSeats = new HashSet<>(grid.getAdjacent(seat));
     adjacentSeats.removeIf(s -> !toFind.contains(s));
 
-    Set<Seat> toFindMinusAdjacent = new HashSet<>(toFindMinusSelf);
+    HashObjSet<Seat> toFindMinusAdjacent = HashObjSets.newMutableSet(toFindMinusSelf);
     toFindMinusAdjacent.removeAll(adjacentSeats);
 
-    Set<Seat> result = new HashSet<>(adjacentSeats);
+    Set<Seat> result = HashObjSets.newMutableSet(adjacentSeats);
     result.add(seat);
 
     for (Seat adjacentSeat: adjacentSeats) {
