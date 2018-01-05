@@ -21,9 +21,6 @@ import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.genetic.alter.EmptySeatSwapMutator;
-import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator;
-import com.hubspot.seatsolver.genetic.alter.TeamSwapMutator;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
@@ -31,9 +28,9 @@ import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.GenotypeWriter;
 import com.hubspot.seatsolver.utils.PointUtils;
 
+import io.jenetics.Alterer;
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
-import io.jenetics.PartiallyMatchedCrossover;
 import io.jenetics.Phenotype;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
@@ -66,6 +63,7 @@ public class SeatSolver {
     this.genotypeWriter = genotypeWriter;
   }
 
+  @SuppressWarnings("unchecked")
   public Phenotype<EnumGene<Seat>, Double> run() throws Exception {
 
     long run =  System.currentTimeMillis();
@@ -76,6 +74,15 @@ public class SeatSolver {
       forkJoinPool = new ForkJoinPool(config.populationFilterParallelism().get());
     }
 
+    if (config.alterers().size() < 1) {
+      throw new IllegalArgumentException("Must specify at least one alterer!");
+    }
+
+    Alterer<EnumGene<Seat>, Double> first = config.alterers().get(0);
+    Alterer<EnumGene<Seat>, Double>[] alterers = config.alterers().size() > 1 ?
+        config.alterers().subList(1, config.alterers().size()).toArray(new Alterer[]{}) :
+        new Alterer[]{};
+
     Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
@@ -85,13 +92,7 @@ public class SeatSolver {
         .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 42))
         .executor(config.executor())
         .maximalPhenotypeAge(100)
-        .alterers(
-            new PartiallyMatchedCrossover<>(.2),
-            //new Mutator<>(.05),
-            new MultiTeamSwapMutator(.2, 100),
-            new TeamSwapMutator(.2, 100),
-            new EmptySeatSwapMutator(.2)
-        )
+        .alterers(first, alterers)
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
