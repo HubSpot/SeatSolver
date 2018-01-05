@@ -8,10 +8,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.hubspot.seatsolver.config.DataLoader;
-import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator.MultiTeamSwapMutatorFactory;
-import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
+import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 
@@ -19,16 +16,19 @@ import io.jenetics.util.ISeq;
 
 public class SeatSolverModule extends AbstractModule {
 
-  private final List<Seat> seats;
-  private final List<Team> teams;
+  private final SeatSolverConfig config;
 
-  public SeatSolverModule(DataLoader dataLoader) {
-    this.seats = ImmutableList.copyOf(dataLoader.getSeats());
-    this.teams = ImmutableList.copyOf(dataLoader.getTeams());
+  public SeatSolverModule(SeatSolverConfig config) {
+    this.config = config;
   }
 
   @Override
   protected void configure() {
+    bind(SeatSolverConfig.class).toInstance(config);
+
+    List<Seat> seats = ImmutableList.copyOf(config.dataLoader().getSeats());
+    List<Team> teams = ImmutableList.copyOf(config.dataLoader().getTeams());
+
     bind(new TypeLiteral<List<Seat>>(){}).toInstance(seats);
     bind(new TypeLiteral<List<Team>>(){}).toInstance(teams);
     bind(new TypeLiteral<ISeq<Seat>>(){}).toInstance(ISeq.of(seats));
@@ -37,14 +37,6 @@ public class SeatSolverModule extends AbstractModule {
     ObjectMapper objectMapper = new ObjectMapper()
         .registerModules(new GuavaModule(), new Jdk8Module());
     bind(ObjectMapper.class).toInstance(objectMapper);
-
-    new FactoryModuleBuilder()
-        .build(SeatSwapMutatorFactory.class)
-        .configure(binder());
-
-    new FactoryModuleBuilder()
-        .build(MultiTeamSwapMutatorFactory.class)
-        .configure(binder());
   }
 
 }

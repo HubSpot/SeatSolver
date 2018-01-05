@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,18 +15,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
+import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.genetic.alter.EmptySeatSwapMutator;
-import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator.MultiTeamSwapMutatorFactory;
-import com.hubspot.seatsolver.genetic.alter.SeatSwapMutator.SeatSwapMutatorFactory;
+import com.hubspot.seatsolver.genetic.alter.MultiTeamSwapMutator;
 import com.hubspot.seatsolver.genetic.alter.TeamSwapMutator;
-import com.hubspot.seatsolver.hubspot.HubspotDataLoader;
 import com.hubspot.seatsolver.model.Seat;
 import com.hubspot.seatsolver.model.Team;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
@@ -48,39 +44,36 @@ import io.jenetics.engine.Limits;
 public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
+  private final SeatSolverConfig config;
   private final List<Seat> seats;
   private final List<Team> teams;
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
-  private final SeatSwapMutatorFactory swapMutatorFactory;
-  private final MultiTeamSwapMutatorFactory multiTeamSwapMutatorFactory;
 
   @Inject
-  public SeatSolver(List<Seat> seats,
+  public SeatSolver(SeatSolverConfig config,
+                    List<Seat> seats,
                     List<Team> teams,
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
-                    GenotypeWriter genotypeWriter,
-                    SeatSwapMutatorFactory swapMutatorFactory,
-                    MultiTeamSwapMutatorFactory multiTeamSwapMutatorFactory) {
+                    GenotypeWriter genotypeWriter) {
+    this.config = config;
     this.seats = seats;
     this.teams = teams;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;
-    this.swapMutatorFactory = swapMutatorFactory;
-    this.multiTeamSwapMutatorFactory = multiTeamSwapMutatorFactory;
   }
 
-  public void run() throws Exception {
+  public Phenotype<EnumGene<Seat>, Double> run() throws Exception {
 
     long run =  System.currentTimeMillis();
     LOG.info("Building engine - Run {}", run);
 
     ForkJoinPool forkJoinPool = ForkJoinPool.commonPool();
-    if (System.getProperty("population.filter.parallelism") != null) {
-      forkJoinPool = new ForkJoinPool(Integer.valueOf(System.getProperty("population.filter.parallelism")));
+    if (config.populationFilterParallelism().isPresent()) {
+      forkJoinPool = new ForkJoinPool(config.populationFilterParallelism().get());
     }
 
     Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
@@ -90,13 +83,13 @@ public class SeatSolver {
         .populationSize(1500)
         .survivorsSize(100)
         .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 42))
-        .executor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()))
+        .executor(config.executor())
         .maximalPhenotypeAge(100)
         .alterers(
-            new PartiallyMatchedCrossover<>(.15),
+            new PartiallyMatchedCrossover<>(.2),
             //new Mutator<>(.05),
-            multiTeamSwapMutatorFactory.create(.2, 10),
-            new TeamSwapMutator(.1, 10),
+            new MultiTeamSwapMutator(.2, 100),
+            new TeamSwapMutator(.2, 100),
             new EmptySeatSwapMutator(.2)
         )
         .build();
@@ -114,7 +107,6 @@ public class SeatSolver {
           }
         })
     );
-
 
     Phenotype<EnumGene<Seat>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
@@ -149,6 +141,8 @@ public class SeatSolver {
 
     genotypeWriter.write(result.getGenotype(), "out/solution-" + run + ".json");
     GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out-" + run + ".dot");
+
+    return result;
   }
 
   private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result, long run) {
@@ -200,19 +194,5 @@ public class SeatSolver {
           return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
         })
         .filter(d -> d > 0);
-  }
-
-  public static void main(String[] args) throws Exception {
-    LOG.info("Starting data load");
-    HubspotDataLoader dataLoader = new HubspotDataLoader("data/data.json");
-    dataLoader.load();
-
-    LOG.info("Creating injector");
-    Injector i = Guice.createInjector(new SeatSolverModule(dataLoader));
-
-    LOG.info("Running optimizer");
-    i.getInstance(SeatSolver.class).run();;
-
-    LOG.info("Optimization complete");
   }
 }

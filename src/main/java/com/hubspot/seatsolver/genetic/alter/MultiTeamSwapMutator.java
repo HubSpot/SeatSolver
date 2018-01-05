@@ -22,14 +22,12 @@ import io.jenetics.util.ISeq;
 import io.jenetics.util.MSeq;
 
 public class MultiTeamSwapMutator extends Mutator<EnumGene<Seat>, Double> {
-  private final SeatGrid seatGrid;
   private final int maxSizeRetries;
 
   @Inject
-  public MultiTeamSwapMutator(SeatGrid seatGrid, @Assisted double probability, @Assisted int maxSizeRetries) {
+  public MultiTeamSwapMutator(double probability, @Assisted int maxSizeRetries) {
     super(probability);
     this.maxSizeRetries = maxSizeRetries;
-    this.seatGrid = seatGrid;
   }
 
   protected MutatorResult<Phenotype<EnumGene<Seat>, Double>> mutate(
@@ -53,7 +51,8 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<Seat>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-   TeamChromosome teamChromosome1 = ((TeamChromosome) ch1);
+    TeamChromosome teamChromosome1 = ((TeamChromosome) ch1);
+    SeatGrid seatGrid = teamChromosome1.getSeatGrid();
 
     Set<Seat> adjacent = ch1.stream()
         .flatMap(seatEnumGene -> seatGrid.getAdjacent(seatEnumGene.getAllele()).stream())
@@ -113,9 +112,5 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<Seat>, Double> {
     chromosomes.set(chIndex3, newTeam3);
 
     return MutatorResult.of(phenotype.newInstance(Genotype.of(chromosomes)));
-  }
-
-  public interface MultiTeamSwapMutatorFactory {
-    MultiTeamSwapMutator create(double probability, int maxSizeRetries);
   }
 }

@@ -69,6 +69,10 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return team;
   }
 
+  public SeatGrid getSeatGrid() {
+    return seatGrid;
+  }
+
   public double meanWeightedSeatDistance() {
     Double dist = meanWeightedSeatDist.get();
     if (dist < 0) {

@@ -14,6 +14,8 @@
   <version>1.0-SNAPSHOT</version>
 
   <properties>
+    <basepom.check.skip-findbugs>true</basepom.check.skip-findbugs>
+
     <project.build.targetJdk>1.8</project.build.targetJdk>
     <koloboke.version>0.6.8</koloboke.version>
   </properties>
@@ -73,14 +75,6 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
@@ -99,10 +93,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
