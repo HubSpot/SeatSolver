@@ -9,7 +9,7 @@ import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
 
-import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.SeatIF;
 
 import io.jenetics.Alterer;
 import io.jenetics.EnumGene;
@@ -23,7 +23,7 @@ public interface SeatSolverConfigIF {
 
   DataLoader dataLoader();
 
-  List<Alterer<EnumGene<Seat>, Double>> alterers();
+  List<Alterer<EnumGene<SeatIF>, Double>> alterers();
 
   Optional<Integer> populationFilterParallelism();
 

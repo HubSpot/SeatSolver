@@ -9,8 +9,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.hubspot.seatsolver.config.SeatSolverConfig;
-import com.hubspot.seatsolver.model.Seat;
-import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.TeamIF;
 
 import io.jenetics.util.ISeq;
 
@@ -26,13 +26,13 @@ public class SeatSolverModule extends AbstractModule {
   protected void configure() {
     bind(SeatSolverConfig.class).toInstance(config);
 
-    List<Seat> seats = ImmutableList.copyOf(config.dataLoader().getSeats());
-    List<Team> teams = ImmutableList.copyOf(config.dataLoader().getTeams());
+    List<? extends SeatIF> seats = ImmutableList.copyOf(config.dataLoader().getSeats());
+    List<? extends TeamIF> teams = ImmutableList.copyOf(config.dataLoader().getTeams());
 
-    bind(new TypeLiteral<List<Seat>>(){}).toInstance(seats);
-    bind(new TypeLiteral<List<Team>>(){}).toInstance(teams);
-    bind(new TypeLiteral<ISeq<Seat>>(){}).toInstance(ISeq.of(seats));
-    bind(new TypeLiteral<ISeq<Team>>(){}).toInstance(ISeq.of(teams));
+    bind(new TypeLiteral<List<? extends SeatIF>>(){}).toInstance(seats);
+    bind(new TypeLiteral<List<? extends TeamIF>>(){}).toInstance(teams);
+    bind(new TypeLiteral<ISeq<? extends SeatIF>>(){}).toInstance(ISeq.of(seats));
+    bind(new TypeLiteral<ISeq<? extends TeamIF>>(){}).toInstance(ISeq.of(teams));
 
     ObjectMapper objectMapper = new ObjectMapper()
         .registerModules(new GuavaModule(), new Jdk8Module());

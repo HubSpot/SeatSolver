@@ -21,8 +21,9 @@ import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.model.Seat;
-import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.TeamIF;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.GenotypeWriter;
@@ -42,16 +43,16 @@ public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
   private final SeatSolverConfig config;
-  private final List<Seat> seats;
-  private final List<Team> teams;
+  private final List<? extends SeatIF> seats;
+  private final List<? extends TeamIF> teams;
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
 
   @Inject
   public SeatSolver(SeatSolverConfig config,
-                    List<Seat> seats,
-                    List<Team> teams,
+                    List<? extends SeatIF> seats,
+                    List<? extends TeamIF> teams,
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter) {
@@ -64,7 +65,7 @@ public class SeatSolver {
   }
 
   @SuppressWarnings("unchecked")
-  public Phenotype<EnumGene<Seat>, Double> run() throws Exception {
+  public Phenotype<EnumGene<SeatIF>, Double> run() throws Exception {
 
     long run =  System.currentTimeMillis();
     LOG.info("Building engine - Run {}", run);
@@ -78,12 +79,12 @@ public class SeatSolver {
       throw new IllegalArgumentException("Must specify at least one alterer!");
     }
 
-    Alterer<EnumGene<Seat>, Double> first = config.alterers().get(0);
-    Alterer<EnumGene<Seat>, Double>[] alterers = config.alterers().size() > 1 ?
+    Alterer<EnumGene<SeatIF>, Double> first = config.alterers().get(0);
+    Alterer<EnumGene<SeatIF>, Double>[] alterers = config.alterers().size() > 1 ?
         config.alterers().subList(1, config.alterers().size()).toArray(new Alterer[]{}) :
         new Alterer[]{};
 
-    Engine<EnumGene<Seat>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
+    Engine<EnumGene<SeatIF>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
@@ -99,17 +100,17 @@ public class SeatSolver {
     LOG.info("Starting evolution");
     EvolutionStatistics statistics = EvolutionStatistics.ofNumber();
 
-    AtomicReference<EvolutionResult<EnumGene<Seat>, Double>> currentResult = new AtomicReference<>(null);
+    AtomicReference<EvolutionResult<EnumGene<SeatIF>, Double>> currentResult = new AtomicReference<>(null);
     Runtime.getRuntime().addShutdownHook(
         new Thread(() -> {
-          EvolutionResult<EnumGene<Seat>, Double> result = currentResult.get();
+          EvolutionResult<EnumGene<SeatIF>, Double> result = currentResult.get();
           if (result != null) {
             writeGenotype(result, run);
           }
         })
     );
 
-    Phenotype<EnumGene<Seat>, Double> result = engine.stream()
+    Phenotype<EnumGene<SeatIF>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
         .limit(Limits.byExecutionTime(Duration.of(8, ChronoUnit.HOURS)))
         .limit(100000)
@@ -146,7 +147,7 @@ public class SeatSolver {
     return result;
   }
 
-  private void writeGenotype(EvolutionResult<EnumGene<Seat>, Double> result, long run) {
+  private void writeGenotype(EvolutionResult<EnumGene<SeatIF>, Double> result, long run) {
     try {
       GenotypeVisualizer.outputGraphViz(
           result.getBestPhenotype().getGenotype(),
@@ -161,9 +162,9 @@ public class SeatSolver {
     }
   }
 
-  private double fitness(Genotype<EnumGene<Seat>> genotype) {
+  private double fitness(Genotype<EnumGene<SeatIF>> genotype) {
 
-    Map<String, TeamChromosome> chromosomeByTeam = genotype.stream()
+    Map<String, TeamChromosome> chromosomeByTeamIF = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
@@ -176,7 +177,7 @@ public class SeatSolver {
         .forEach(genes -> {
           TeamChromosome chromosome = ((TeamChromosome) genes);
           intraTeamStats.accept(chromosome.meanWeightedSeatDistance());
-          adjacencyDists(chromosome, chromosomeByTeam).forEach(adjacencyStats);
+          adjacencyDists(chromosome, chromosomeByTeamIF).forEach(adjacencyStats);
         });
 
     double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
@@ -184,10 +185,10 @@ public class SeatSolver {
     return (intraTeamScaled / 2) + adjacencyScaled;
   }
 
-  private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeam) {
+  private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeamIF) {
     return chromosome.getTeam().wantsAdjacent().stream()
         .mapToDouble(adj -> {
-          TeamChromosome other = chromosomeByTeam.get(adj.id());
+          TeamChromosome other = chromosomeByTeamIF.get(adj.id());
           if (other == null) {
             return ((double) 0);
           }

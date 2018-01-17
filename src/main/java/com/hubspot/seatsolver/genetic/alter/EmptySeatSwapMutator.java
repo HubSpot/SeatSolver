@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.SeatIF;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
@@ -18,13 +18,13 @@ import io.jenetics.internal.math.probability;
 import io.jenetics.util.ISeq;
 import io.jenetics.util.MSeq;
 
-public class EmptySeatSwapMutator extends Mutator<EnumGene<Seat>, Double> {
+public class EmptySeatSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
   public EmptySeatSwapMutator(double probability) {
     super(probability);
   }
 
-  protected MutatorResult<Phenotype<EnumGene<Seat>, Double>> mutate(
-      final Phenotype<EnumGene<Seat>, Double> phenotype,
+  protected MutatorResult<Phenotype<EnumGene<SeatIF>, Double>> mutate(
+      final Phenotype<EnumGene<SeatIF>, Double> phenotype,
       final long generation,
       final double p,
       final Random random
@@ -34,9 +34,9 @@ public class EmptySeatSwapMutator extends Mutator<EnumGene<Seat>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-    Genotype<EnumGene<Seat>> genotype = phenotype.getGenotype();
+    Genotype<EnumGene<SeatIF>> genotype = phenotype.getGenotype();
     int chIdx = random.nextInt(genotype.length());
-    Chromosome<EnumGene<Seat>> chromosome = genotype.get(chIdx);
+    Chromosome<EnumGene<SeatIF>> chromosome = genotype.get(chIdx);
     if (chromosome instanceof EmptySeatChromosome) {
       return MutatorResult.of(phenotype);
     }
@@ -46,7 +46,7 @@ public class EmptySeatSwapMutator extends Mutator<EnumGene<Seat>, Double> {
     int emptySeatIdx = -1;
     EmptySeatChromosome empty = null;
     for (int i = 0; i < genotype.length(); i++) {
-      Chromosome<EnumGene<Seat>> current = genotype.get(i);
+      Chromosome<EnumGene<SeatIF>> current = genotype.get(i);
       if (current instanceof EmptySeatChromosome) {
         emptySeatIdx = i;
         empty = ((EmptySeatChromosome) current);
@@ -60,12 +60,12 @@ public class EmptySeatSwapMutator extends Mutator<EnumGene<Seat>, Double> {
 
     TeamChromosome newChromosome = teamChromosome.newTeamChromosome(empty.toSeq().map(EnumGene::getAllele));
 
-    Set<Seat> newBlock = newChromosome.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
+    Set<SeatIF> newBlock = newChromosome.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
 
-    MSeq<EnumGene<Seat>> emptyGenesMut = empty.toSeq().copy();
+    MSeq<EnumGene<SeatIF>> emptyGenesMut = empty.toSeq().copy();
     emptyGenesMut = emptyGenesMut.append(teamChromosome.toSeq());
 
-    Chromosome<EnumGene<Seat>> newEmpty = empty.newInstance(
+    Chromosome<EnumGene<SeatIF>> newEmpty = empty.newInstance(
         emptyGenesMut.stream()
             .filter(gene -> !newBlock.contains(gene.getAllele()))
             .collect(ISeq.toISeq())
@@ -76,7 +76,7 @@ public class EmptySeatSwapMutator extends Mutator<EnumGene<Seat>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-    final MSeq<Chromosome<EnumGene<Seat>>> chromosomes = genotype.toSeq().copy();
+    final MSeq<Chromosome<EnumGene<SeatIF>>> chromosomes = genotype.toSeq().copy();
     chromosomes.set(emptySeatIdx, newEmpty);
     chromosomes.set(chIdx, newChromosome);
 

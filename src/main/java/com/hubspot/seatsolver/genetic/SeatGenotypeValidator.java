@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.grid.SeatGrid;
-import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.SeatIF;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
@@ -28,19 +28,19 @@ public class SeatGenotypeValidator {
     this.grid = grid;
   }
 
-  public boolean validateGenotype(Genotype<EnumGene<Seat>> genotype) {
+  public boolean validateGenotype(Genotype<EnumGene<SeatIF>> genotype) {
     LOG.trace("Validating genotype: {}", genotype);
 
     HashObjSet<String> chosen = HashObjSets.getDefaultFactory().newMutableSet();
     HashObjSet<String> empty = HashObjSets.getDefaultFactory().newMutableSet();
-    for (Chromosome<EnumGene<Seat>> chromosome : genotype) {
+    for (Chromosome<EnumGene<SeatIF>> chromosome : genotype) {
       if (chromosome instanceof EmptySeatChromosome) {
         chromosome.stream()
             .map(gene -> gene.getAllele().id())
             .forEach(empty::add);
       }
 
-      for (EnumGene<Seat> gene : chromosome) {
+      for (EnumGene<SeatIF> gene : chromosome) {
         if (chosen.contains(gene.getAllele().id())) {
           return false;
         }
@@ -53,14 +53,14 @@ public class SeatGenotypeValidator {
         continue;
       }
 
-      HashObjSet<Seat> seats = chromosome.stream()
+      HashObjSet<SeatIF> seats = chromosome.stream()
           .map(EnumGene::getAllele)
           .collect(Collectors.toCollection(HashObjSets.getDefaultFactory()::newMutableSet));
 
-      Seat start = seats.iterator().next();
+      SeatIF start = seats.iterator().next();
 
-      Set<Seat> connected = connectedSeatsForSeat(start, seats);
-      connectedSeatsForSeat(start, seats);
+      Set<SeatIF> connected = connectedSeatsForSeatIF(start, seats);
+      connectedSeatsForSeatIF(start, seats);
 
       if (connected.size() < chromosome.length()) {
         LOG.debug("Got unconnected chromosome: {}", chromosome.stream().collect(Collectors.toList()));
@@ -77,25 +77,25 @@ public class SeatGenotypeValidator {
     return true;
   }
 
-  private Set<Seat> connectedSeatsForSeat(Seat seat, Set<Seat> toFind) {
+  private Set<SeatIF> connectedSeatsForSeatIF(SeatIF seat, Set<SeatIF> toFind) {
     if (toFind.isEmpty()) {
       return Collections.emptySet();
     }
 
-    HashObjSet<Seat> toFindMinusSelf = HashObjSets.newMutableSet(toFind);
+    HashObjSet<SeatIF> toFindMinusSelf = HashObjSets.newMutableSet(toFind);
     toFindMinusSelf.remove(seat);
 
-    Set<Seat> adjacentSeats = new HashSet<>(grid.getAdjacent(seat));
+    Set<SeatIF> adjacentSeats = new HashSet<>(grid.getAdjacent(seat));
     adjacentSeats.removeIf(s -> !toFind.contains(s));
 
-    HashObjSet<Seat> toFindMinusAdjacent = HashObjSets.newMutableSet(toFindMinusSelf);
+    HashObjSet<SeatIF> toFindMinusAdjacent = HashObjSets.newMutableSet(toFindMinusSelf);
     toFindMinusAdjacent.removeAll(adjacentSeats);
 
-    Set<Seat> result = HashObjSets.newMutableSet(adjacentSeats);
+    Set<SeatIF> result = HashObjSets.newMutableSet(adjacentSeats);
     result.add(seat);
 
-    for (Seat adjacentSeat: adjacentSeats) {
-      Set<Seat> nextConnected = connectedSeatsForSeat(adjacentSeat, toFindMinusAdjacent);
+    for (SeatIF adjacentSeatIF: adjacentSeats) {
+      Set<SeatIF> nextConnected = connectedSeatsForSeatIF(adjacentSeatIF, toFindMinusAdjacent);
       toFindMinusAdjacent.removeAll(nextConnected);
       result.addAll(nextConnected);
     }

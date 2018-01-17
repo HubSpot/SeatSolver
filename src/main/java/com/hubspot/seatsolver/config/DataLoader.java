@@ -2,11 +2,11 @@ package com.hubspot.seatsolver.config;
 
 import java.util.List;
 
-import com.hubspot.seatsolver.model.Seat;
-import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.TeamIF;
 
 public interface DataLoader {
 
-  List<Seat> getSeats();
-  List<Team> getTeams();
+  List<? extends SeatIF> getSeats();
+  List<? extends TeamIF> getTeams();
 }

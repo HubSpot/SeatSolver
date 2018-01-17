@@ -15,8 +15,8 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.grid.SeatGrid;
-import com.hubspot.seatsolver.model.Seat;
-import com.hubspot.seatsolver.model.Team;
+import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.TeamIF;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
@@ -25,17 +25,17 @@ import io.jenetics.util.Factory;
 import io.jenetics.util.ISeq;
 
 @Singleton
-public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
+public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatIF>>> {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
-  private final ISeq<Seat> seats;
-  private final Set<Seat> seatSet;
-  private final List<Team> teams;
+  private final ISeq<? extends SeatIF> seats;
+  private final Set<SeatIF> seatSet;
+  private final List<? extends TeamIF> teams;
   private final SeatGrid grid;
 
   @Inject
-  public SeatGenotypeFactory(ISeq<Seat> seats,
-                             List<Team> teams,
+  public SeatGenotypeFactory(ISeq<? extends SeatIF> seats,
+                             List<? extends TeamIF> teams,
                              SeatGrid grid) {
     this.seats = seats;
     this.seatSet = ImmutableSet.copyOf(seats);
@@ -44,17 +44,17 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
   }
 
   @Override
-  public Genotype<EnumGene<Seat>> newInstance() {
+  public Genotype<EnumGene<SeatIF>> newInstance() {
     // This is a very naive algorithm, we pick a random unused seat, start there and then find the adjacent seats and make chromosome from that
     // We also randomize the direction of movement, and the previous seat from which movement starts
     // We will allow invalid solutions by simply picking an unused seat if we are boxed in
     Stopwatch stopwatch = Stopwatch.createStarted();
     LOG.debug("Starting new genotype generation");
-    Set<Seat> availableSeats = Sets.newHashSet(seats);
+    Set<SeatIF> availableSeats = Sets.newHashSet(seats);
 
-    List<Chromosome<EnumGene<Seat>>> chromosomes = teams.stream()
-        .sorted(Comparator.comparing(Team::numMembers).reversed())
-        .map(team -> chromosomeForTeam(team, availableSeats))
+    List<Chromosome<EnumGene<SeatIF>>> chromosomes = teams.stream()
+        .sorted(Comparator.comparing(TeamIF::numMembers).reversed())
+        .map(team -> chromosomeForTeamIF(team, availableSeats))
         .collect(Collectors.toList());
 
     chromosomes.add(new EmptySeatChromosome(availableSeats, seats));
@@ -63,8 +63,8 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat>>> {
     return Genotype.of(chromosomes);
   }
 
-  private TeamChromosome chromosomeForTeam(Team team, Set<Seat> remaining) {
-    List<Seat> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
+  private TeamChromosome chromosomeForTeamIF(TeamIF team, Set<SeatIF> remaining) {
+    List<? extends SeatIF> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
     remaining.removeAll(selected);
 
     LOG.trace("Selected {} for team {}, remaining: {}", selected, team, remaining);

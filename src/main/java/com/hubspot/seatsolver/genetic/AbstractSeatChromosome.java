@@ -1,18 +1,18 @@
 package com.hubspot.seatsolver.genetic;
 
-import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.SeatIF;
 
 import io.jenetics.AbstractChromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.util.ISeq;
 
-public abstract class AbstractSeatChromosome extends AbstractChromosome<EnumGene<Seat>> {
+public abstract class AbstractSeatChromosome extends AbstractChromosome<EnumGene<SeatIF>> {
 
-  public AbstractSeatChromosome(ISeq<? extends EnumGene<Seat>> genes) {
+  public AbstractSeatChromosome(ISeq<? extends EnumGene<SeatIF>> genes) {
     super(genes);
   }
 
   public abstract String getIdentifier();
 
-  public abstract AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<Seat>> genes);
+  public abstract AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatIF>> genes);
 }

@@ -13,8 +13,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-@JsonSerialize(as = Team.class)
-@JsonDeserialize(as = Team.class)
+@JsonSerialize(as = TeamIF.class)
+@JsonDeserialize(as = TeamIF.class)
 public interface TeamIF {
   String id();
   int numMembers();
