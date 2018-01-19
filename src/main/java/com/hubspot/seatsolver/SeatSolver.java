@@ -22,7 +22,6 @@ import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.model.SeatCore;
-import com.hubspot.seatsolver.model.SeatCore;
 import com.hubspot.seatsolver.model.TeamCore;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
@@ -43,16 +42,16 @@ public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
   private final SeatSolverConfig config;
-  private final List<? extends SeatCore> seats;
-  private final List<? extends TeamCore> teams;
+  private final List<SeatCore> seats;
+  private final List<TeamCore> teams;
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
 
   @Inject
   public SeatSolver(SeatSolverConfig config,
-                    List<? extends SeatCore> seats,
-                    List<? extends TeamCore> teams,
+                    List<SeatCore> seats,
+                    List<TeamCore> teams,
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter) {

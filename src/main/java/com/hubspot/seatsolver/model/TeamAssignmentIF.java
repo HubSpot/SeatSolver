@@ -18,5 +18,5 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 @JsonDeserialize(as = TeamAssignment.class)
 public interface TeamAssignmentIF {
   Optional<TeamCore> getTeam();
-  List<? extends SeatCore> getSeats();
+  List<SeatCore> getSeats();
 }

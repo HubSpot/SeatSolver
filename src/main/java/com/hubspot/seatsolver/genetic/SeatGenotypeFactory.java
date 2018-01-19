@@ -28,14 +28,14 @@ import io.jenetics.util.ISeq;
 public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>> {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
-  private final ISeq<? extends SeatCore> seats;
+  private final ISeq<SeatCore> seats;
   private final Set<SeatCore> seatSet;
-  private final List<? extends TeamCore> teams;
+  private final List<TeamCore> teams;
   private final SeatGrid grid;
 
   @Inject
-  public SeatGenotypeFactory(ISeq<? extends SeatCore> seats,
-                             List<? extends TeamCore> teams,
+  public SeatGenotypeFactory(ISeq<SeatCore> seats,
+                             List<TeamCore> teams,
                              SeatGrid grid) {
     this.seats = seats;
     this.seatSet = ImmutableSet.copyOf(seats);
@@ -64,7 +64,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
   }
 
   private TeamChromosome chromosomeForTeamCore(TeamCore team, Set<SeatCore> remaining) {
-    List<? extends SeatCore> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
+    List<SeatCore> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
     remaining.removeAll(selected);
 
     LOG.trace("Selected {} for team {}, remaining: {}", selected, team, remaining);

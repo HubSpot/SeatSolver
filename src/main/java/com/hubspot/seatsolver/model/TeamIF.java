@@ -13,5 +13,5 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 )
 @JsonSerialize(as = TeamCore.class)
 @JsonDeserialize(as = TeamCore.class)
-public interface TeamCore extends TeamCore {
+public interface TeamIF extends TeamCore {
 }

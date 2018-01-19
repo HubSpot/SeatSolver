@@ -49,7 +49,7 @@ public class GenotypeWriter {
     }
   }
 
-  private static List<? extends SeatCore> seatsFromChromosome(Chromosome<EnumGene<SeatCore>> chromosome) {
+  private static List<SeatCore> seatsFromChromosome(Chromosome<EnumGene<SeatCore>> chromosome) {
     return chromosome.stream().map(EnumGene::getAllele).collect(Collectors.toList());
   }
 }

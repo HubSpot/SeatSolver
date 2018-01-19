@@ -9,10 +9,10 @@ import io.jenetics.Gene;
 import io.jenetics.util.RandomRegistry;
 
 public class SeatGene implements Gene<SeatCore, SeatGene> {
-  private final List<? extends SeatCore> allSeats;
+  private final List<SeatCore> allSeats;
   private final SeatCore seat;
 
-  public SeatGene(List<? extends SeatCore> allSeats, SeatCore seat) {
+  public SeatGene(List<SeatCore> allSeats, SeatCore seat) {
     this.allSeats = allSeats;
     this.seat = seat;
   }

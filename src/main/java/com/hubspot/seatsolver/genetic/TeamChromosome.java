@@ -34,17 +34,17 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private static final Logger LOG = LoggerFactory.getLogger(TeamChromosome.class);
 
   private final SeatGrid seatGrid;
-  private final ISeq<? extends SeatCore> allSeats;
-  private final Set<? extends SeatCore> allSeatsSet;
+  private final ISeq<SeatCore> allSeats;
+  private final Set<SeatCore> allSeatsSet;
   private final TeamCore team;
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
 
   public TeamChromosome(SeatGrid seatGrid,
-                        ISeq<? extends SeatCore> allSeats,
-                        Set<? extends SeatCore> allSeatsSet,
-                        List<? extends SeatCore> selectedSeats,
+                        ISeq<SeatCore> allSeats,
+                        Set<SeatCore> allSeatsSet,
+                        List<SeatCore> selectedSeats,
                         TeamCore team) {
     super(generateSeq(allSeats, selectedSeats));
     this.seatGrid = seatGrid;
@@ -53,7 +53,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     this.team = team;
   }
 
-  public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes, SeatGrid seatGrid, ISeq<? extends SeatCore> allSeats, TeamCore team) {
+  public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes, SeatGrid seatGrid, ISeq<SeatCore> allSeats, TeamCore team) {
     super(genes);
     this.seatGrid = seatGrid;
     this.allSeats = allSeats;
@@ -61,8 +61,8 @@ public class TeamChromosome extends AbstractSeatChromosome {
     this.team = team;
   }
 
-  private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<? extends SeatCore> allSeats,
-                                                    List<? extends SeatCore> selectedSeats) {
+  private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<SeatCore> allSeats,
+                                                    List<SeatCore> selectedSeats) {
     MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(selectedSeats.size());
     ISeq<SeatCore> allSeatsSeq = ISeq.of(allSeats);
     for (int i = 0; i < selectedSeats.size(); ++i) {
@@ -92,7 +92,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private double calculateMeanWeightedSeatDistance() {
     // mean of pairwise distances
-    List<? extends SeatCore> seats = toSeq().stream()
+    List<SeatCore> seats = toSeq().stream()
         .map(EnumGene::getAllele)
         .collect(Collectors.toList());
 
@@ -126,7 +126,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return c;
   }
 
-  private List<? extends SeatCore> selectSeatBlock(ISeq<? extends SeatCore> availableSeats) {
+  private List<SeatCore> selectSeatBlock(ISeq<SeatCore> availableSeats) {
     return selectSeatBlock(seatGrid, availableSeats, length());
   }
 
@@ -135,7 +135,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return new TeamChromosome(genes, seatGrid, allSeats, team);
   }
 
-  public TeamChromosome newTeamChromosome(ISeq<? extends SeatCore> available) {
+  public TeamChromosome newTeamChromosome(ISeq<SeatCore> available) {
     return new TeamChromosome(seatGrid, allSeats, allSeatsSet, selectSeatBlock(available), team);
   }
 
@@ -146,7 +146,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @Override
   public Chromosome<EnumGene<SeatCore>> newInstance() {
-    List<? extends SeatCore> selected = selectSeatBlock(seatGrid, allSeats, allSeatsSet, length());
+    List<SeatCore> selected = selectSeatBlock(seatGrid, allSeats, allSeatsSet, length());
     return new TeamChromosome(seatGrid, allSeats, allSeatsSet, selected, team);
   }
 
@@ -164,11 +164,11 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private static final int MAX_BLOCK_ATTEMPTS = 100;
   private static final int MAX_FILL_ATTEMPTS = 100;
 
-  public static List<? extends SeatCore> selectSeatBlock(SeatGrid grid, ISeq<? extends SeatCore> availableSeats, int size) {
+  public static List<SeatCore> selectSeatBlock(SeatGrid grid, ISeq<SeatCore> availableSeats, int size) {
     return selectSeatBlock(grid, availableSeats, Sets.newHashSet(availableSeats), size);
   }
 
-  public static List<? extends SeatCore> selectSeatBlock(SeatGrid grid, ISeq<? extends SeatCore> availableSeats, Set<? extends SeatCore> availableSeatSet, int size) {
+  public static List<SeatCore> selectSeatBlock(SeatGrid grid, ISeq<SeatCore> availableSeats, Set<SeatCore> availableSeatSet, int size) {
     List<SeatCore> selected = selectBlock(grid, availableSeats, availableSeatSet, size);
 
     Set<SeatCore> selectedSet = new HashSet<>(selected);
@@ -197,7 +197,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return selected;
   }
 
-  private static List<SeatCore> selectBlock(SeatGrid grid, ISeq<? extends SeatCore> availableSeatList, Set<? extends SeatCore> availableSeatSet, int size) {
+  private static List<SeatCore> selectBlock(SeatGrid grid, ISeq<SeatCore> availableSeatList, Set<SeatCore> availableSeatSet, int size) {
     Set<SeatCore> lastSelected = new HashSet<>();
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
       // pick a random starting point
@@ -228,7 +228,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return Lists.newArrayList(lastSelected);
   }
 
-  public static Optional<SeatCore> selectAdjacent(Set<SeatCore> existing, Set<? extends SeatCore> available, SeatGrid grid) {
+  public static Optional<SeatCore> selectAdjacent(Set<SeatCore> existing, Set<SeatCore> available, SeatGrid grid) {
     Set<SeatCore> allAdjacent = existing.stream()
         .flatMap(seat -> grid.getAdjacent(seat).stream())
         .collect(Collectors.toSet());

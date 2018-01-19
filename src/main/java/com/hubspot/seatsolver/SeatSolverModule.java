@@ -26,13 +26,13 @@ public class SeatSolverModule extends AbstractModule {
   protected void configure() {
     bind(SeatSolverConfig.class).toInstance(config);
 
-    List<? extends SeatCore> seats = ImmutableList.copyOf(config.dataLoader().getSeats());
-    List<? extends TeamCore> teams = ImmutableList.copyOf(config.dataLoader().getTeams());
+    List<SeatCore> seats = ImmutableList.copyOf(config.dataLoader().getSeats());
+    List<TeamCore> teams = ImmutableList.copyOf(config.dataLoader().getTeams());
 
-    bind(new TypeLiteral<List<? extends SeatCore>>(){}).toInstance(seats);
-    bind(new TypeLiteral<List<? extends TeamCore>>(){}).toInstance(teams);
-    bind(new TypeLiteral<ISeq<? extends SeatCore>>(){}).toInstance(ISeq.of(seats));
-    bind(new TypeLiteral<ISeq<? extends TeamCore>>(){}).toInstance(ISeq.of(teams));
+    bind(new TypeLiteral<List<SeatCore>>(){}).toInstance(seats);
+    bind(new TypeLiteral<List<TeamCore>>(){}).toInstance(teams);
+    bind(new TypeLiteral<ISeq<SeatCore>>(){}).toInstance(ISeq.of(seats));
+    bind(new TypeLiteral<ISeq<TeamCore>>(){}).toInstance(ISeq.of(teams));
 
     ObjectMapper objectMapper = new ObjectMapper()
         .registerModules(new GuavaModule(), new Jdk8Module());

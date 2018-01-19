@@ -30,7 +30,7 @@ public class SeatGrid {
   private final int size;
 
   @Inject
-  public SeatGrid(List<? extends SeatCore> seats) {
+  public SeatGrid(List<SeatCore> seats) {
     this.size = seats.size();
     double maxX = 0;
     double maxY = 0;

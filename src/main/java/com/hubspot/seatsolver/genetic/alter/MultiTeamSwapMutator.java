@@ -96,7 +96,7 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatCore>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-    ISeq<? extends SeatCore> available = teamChromosome3.toSeq().map(EnumGene::getAllele);
+    ISeq<SeatCore> available = teamChromosome3.toSeq().map(EnumGene::getAllele);
     Chromosome<EnumGene<SeatCore>> newTeam1 = teamChromosome1.newTeamChromosome(available);
 
     Set<SeatCore> taken = newTeam1.stream().map(EnumGene::getAllele).collect(Collectors.toSet());

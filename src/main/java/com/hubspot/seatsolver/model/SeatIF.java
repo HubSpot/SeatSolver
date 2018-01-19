@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 )
 @JsonDeserialize(as = SeatCore.class)
 @JsonSerialize(as = SeatCore.class)
-public interface SeatCore extends SeatCore {
+public interface SeatIF extends SeatCore {
   static SeatCore fromCsvRecord(CSVRecord record) {
     return Seat.builder()
         .x(Integer.parseInt(record.get("x")))
