@@ -15,7 +15,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
-import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatCore;
 
 @Singleton
 public class SeatGrid {
@@ -23,18 +23,18 @@ public class SeatGrid {
   private static final int SEAT_WIDTH = 12;
   private static final int SEAT_HEIGHT = 14;
 
-  private final QuadTree<SeatIF> seatQuadTree;
-  private final SetMultimap<SeatIF, SeatIF> adjacencyMap;
+  private final QuadTree<SeatCore> seatQuadTree;
+  private final SetMultimap<SeatCore, SeatCore> adjacencyMap;
   private final double gridSizeX;
   private final double gridSizeY;
   private final int size;
 
   @Inject
-  public SeatGrid(List<? extends SeatIF> seats) {
+  public SeatGrid(List<? extends SeatCore> seats) {
     this.size = seats.size();
     double maxX = 0;
     double maxY = 0;
-    for (SeatIF seat : seats) {
+    for (SeatCore seat : seats) {
       if (seat.x() > maxX) {
         maxX = seat.x();
       }
@@ -50,9 +50,9 @@ public class SeatGrid {
     this.seatQuadTree = new QuadTree<>(0, 0, maxX, maxY);
     seats.forEach(seat -> seatQuadTree.set(seat.x(), seat.y(), seat));
 
-    HashMultimap<SeatIF, SeatIF> adjMap = HashMultimap.create();
+    HashMultimap<SeatCore, SeatCore> adjMap = HashMultimap.create();
     seats.forEach(seat -> {
-      Set<SeatIF> adj = findAllAdjacent(seat);
+      Set<SeatCore> adj = findAllAdjacent(seat);
       adjMap.putAll(seat, adj);
     });
 
@@ -63,11 +63,11 @@ public class SeatGrid {
     return size;
   }
 
-  public Set<SeatIF> getAdjacent(SeatIF seat) {
+  public Set<SeatCore> getAdjacent(SeatCore seat) {
     return adjacencyMap.get(seat);
   }
 
-  private Set<SeatIF> findAllAdjacent(SeatIF seat) {
+  private Set<SeatCore> findAllAdjacent(SeatCore seat) {
     double xMin = seat.x() - MAX_ADJ_OFFSET;
     double yMin = seat.y() - MAX_ADJ_OFFSET;
     double xMax = seat.x() + MAX_ADJ_OFFSET;
@@ -89,10 +89,10 @@ public class SeatGrid {
       yMax = gridSizeY;
     }
 
-    com.github.varunpant.quadtree.Point<SeatIF>[] points = seatQuadTree.searchWithin(xMin, yMin, xMax, yMax);
+    com.github.varunpant.quadtree.Point<SeatCore>[] points = seatQuadTree.searchWithin(xMin, yMin, xMax, yMax);
 
-    Set<SeatIF> neighbors = new HashSet<>();
-    for (com.github.varunpant.quadtree.Point<SeatIF> point : points) {
+    Set<SeatCore> neighbors = new HashSet<>();
+    for (com.github.varunpant.quadtree.Point<SeatCore> point : points) {
       if (point.getValue() == seat) {
         continue;
       }
@@ -100,14 +100,14 @@ public class SeatGrid {
       neighbors.add(point.getValue());
     }
 
-    Set<SeatIF> result = neighbors.stream()
+    Set<SeatCore> result = neighbors.stream()
         .filter(neighbor -> !isOccluded(seat, neighbor, neighbors))
         .collect(Collectors.toSet());
 
     return result;
   }
 
-  private boolean isOccluded(SeatIF from, SeatIF to, Collection<SeatIF> neighbors) {
+  private boolean isOccluded(SeatCore from, SeatCore to, Collection<SeatCore> neighbors) {
     List<Point> line = bresenhamLine(from, to);
 
     return neighbors.stream()

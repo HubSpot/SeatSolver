@@ -9,7 +9,7 @@ import com.google.inject.assistedinject.Assisted;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.grid.SeatGrid;
-import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatCore;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
@@ -21,7 +21,7 @@ import io.jenetics.internal.math.probability;
 import io.jenetics.util.ISeq;
 import io.jenetics.util.MSeq;
 
-public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
+public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatCore>, Double> {
   private final int maxSizeRetries;
 
   @Inject
@@ -30,8 +30,8 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
     this.maxSizeRetries = maxSizeRetries;
   }
 
-  protected MutatorResult<Phenotype<EnumGene<SeatIF>, Double>> mutate(
-      final Phenotype<EnumGene<SeatIF>, Double> phenotype,
+  protected MutatorResult<Phenotype<EnumGene<SeatCore>, Double>> mutate(
+      final Phenotype<EnumGene<SeatCore>, Double> phenotype,
       final long generation,
       final double p,
       final Random random
@@ -41,12 +41,12 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-    final Genotype<EnumGene<SeatIF>> genotype = phenotype.getGenotype();
+    final Genotype<EnumGene<SeatCore>> genotype = phenotype.getGenotype();
 
     //Choosing the Chromosome index for crossover.
     final int chIndex1 = random.nextInt(genotype.length());
 
-    Chromosome<EnumGene<SeatIF>> ch1 = genotype.get(chIndex1);
+    Chromosome<EnumGene<SeatCore>> ch1 = genotype.get(chIndex1);
     if (ch1 instanceof EmptySeatChromosome) {
       return MutatorResult.of(phenotype);
     }
@@ -54,7 +54,7 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
     TeamChromosome teamChromosome1 = ((TeamChromosome) ch1);
     SeatGrid seatGrid = teamChromosome1.getSeatGrid();
 
-    Set<SeatIF> adjacent = ch1.stream()
+    Set<SeatCore> adjacent = ch1.stream()
         .flatMap(seatEnumGene -> seatGrid.getAdjacent(seatEnumGene.getAllele()).stream())
         .collect(Collectors.toSet());
 
@@ -62,7 +62,7 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
     int chIndex2 = -1;
     TeamChromosome teamChromosome2 = null;
     for (int i = 0; i < genotype.length(); i++) {
-      Chromosome<EnumGene<SeatIF>> maybeAdjacent = genotype.get(i);
+      Chromosome<EnumGene<SeatCore>> maybeAdjacent = genotype.get(i);
       if (maybeAdjacent instanceof EmptySeatChromosome) {
         continue;
       }
@@ -80,7 +80,7 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
     int totalSize = teamChromosome1.length() + teamChromosome2.length();
 
     int chIndex3 = random.nextInt(genotype.length());
-    Chromosome<EnumGene<SeatIF>> ch3 = genotype.get(chIndex3);
+    Chromosome<EnumGene<SeatCore>> ch3 = genotype.get(chIndex3);
 
     int i = 0;
     while ((ch3.length() != totalSize && i < maxSizeRetries) || ch3 instanceof EmptySeatChromosome) {
@@ -96,17 +96,17 @@ public class MultiTeamSwapMutator extends Mutator<EnumGene<SeatIF>, Double> {
       return MutatorResult.of(phenotype);
     }
 
-    ISeq<? extends SeatIF> available = teamChromosome3.toSeq().map(EnumGene::getAllele);
-    Chromosome<EnumGene<SeatIF>> newTeam1 = teamChromosome1.newTeamChromosome(available);
+    ISeq<? extends SeatCore> available = teamChromosome3.toSeq().map(EnumGene::getAllele);
+    Chromosome<EnumGene<SeatCore>> newTeam1 = teamChromosome1.newTeamChromosome(available);
 
-    Set<SeatIF> taken = newTeam1.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
-    ISeq<EnumGene<SeatIF>> remaining = teamChromosome3.stream().filter(gene -> !taken.contains(gene.getAllele())).collect(ISeq.toISeq());
-    Chromosome<EnumGene<SeatIF>> newTeam2 = teamChromosome2.newInstance(remaining);
+    Set<SeatCore> taken = newTeam1.stream().map(EnumGene::getAllele).collect(Collectors.toSet());
+    ISeq<EnumGene<SeatCore>> remaining = teamChromosome3.stream().filter(gene -> !taken.contains(gene.getAllele())).collect(ISeq.toISeq());
+    Chromosome<EnumGene<SeatCore>> newTeam2 = teamChromosome2.newInstance(remaining);
 
-    ISeq<EnumGene<SeatIF>> genes3 = teamChromosome1.toSeq().append(teamChromosome2.toSeq());
-    Chromosome<EnumGene<SeatIF>> newTeam3 = teamChromosome3.newInstance(genes3);
+    ISeq<EnumGene<SeatCore>> genes3 = teamChromosome1.toSeq().append(teamChromosome2.toSeq());
+    Chromosome<EnumGene<SeatCore>> newTeam3 = teamChromosome3.newInstance(genes3);
 
-    final MSeq<Chromosome<EnumGene<SeatIF>>> chromosomes = genotype.toSeq().copy();
+    final MSeq<Chromosome<EnumGene<SeatCore>>> chromosomes = genotype.toSeq().copy();
     chromosomes.set(chIndex1, newTeam1);
     chromosomes.set(chIndex2, newTeam2);
     chromosomes.set(chIndex3, newTeam3);

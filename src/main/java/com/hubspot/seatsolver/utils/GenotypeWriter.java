@@ -10,7 +10,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatCore;
 import com.hubspot.seatsolver.model.TeamAssignment;
 
 import io.jenetics.Chromosome;
@@ -26,7 +26,7 @@ public class GenotypeWriter {
     this.objectMapper = objectMapper;
   }
 
-  public void write(Genotype<EnumGene<SeatIF>> genotype, String filename) throws IOException {
+  public void write(Genotype<EnumGene<SeatCore>> genotype, String filename) throws IOException {
     try (FileWriter writer = new FileWriter(filename)) {
       List<TeamAssignment> assignments = genotype.stream()
           .map(c -> {
@@ -49,7 +49,7 @@ public class GenotypeWriter {
     }
   }
 
-  private static List<? extends SeatIF> seatsFromChromosome(Chromosome<EnumGene<SeatIF>> chromosome) {
+  private static List<? extends SeatCore> seatsFromChromosome(Chromosome<EnumGene<SeatCore>> chromosome) {
     return chromosome.stream().map(EnumGene::getAllele).collect(Collectors.toList());
   }
 }

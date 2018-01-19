@@ -1,7 +1,5 @@
 package com.hubspot.seatsolver.model;
 
-import java.util.List;
-
 import org.immutables.value.Value.Immutable;
 import org.immutables.value.Value.Style;
 
@@ -13,10 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-@JsonSerialize(as = TeamIF.class)
-@JsonDeserialize(as = TeamIF.class)
-public interface TeamIF {
-  String id();
-  int numMembers();
-  List<Adjacency> wantsAdjacent();
+@JsonSerialize(as = TeamCore.class)
+@JsonDeserialize(as = TeamCore.class)
+public interface TeamCore extends TeamCore {
 }

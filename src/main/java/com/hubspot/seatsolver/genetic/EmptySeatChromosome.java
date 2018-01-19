@@ -5,16 +5,16 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
-import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatCore;
 
 import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.util.ISeq;
 
 public class EmptySeatChromosome extends AbstractSeatChromosome {
-  private final ISeq<? extends SeatIF> allSeats;
+  private final ISeq<? extends SeatCore> allSeats;
 
-  public EmptySeatChromosome(Collection<SeatIF> seats, ISeq<? extends SeatIF> allSeats) {
+  public EmptySeatChromosome(Collection<SeatCore> seats, ISeq<? extends SeatCore> allSeats) {
     super(
         ISeq.of(
             seats.stream()
@@ -26,23 +26,23 @@ public class EmptySeatChromosome extends AbstractSeatChromosome {
     this.allSeats = allSeats;
   }
 
-  public EmptySeatChromosome(ISeq<? extends EnumGene<SeatIF>> genes, ISeq<? extends SeatIF> allSeats) {
+  public EmptySeatChromosome(ISeq<? extends EnumGene<SeatCore>> genes, ISeq<? extends SeatCore> allSeats) {
     super(genes);
     this.allSeats = allSeats;
   }
 
   @Override
-  public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatIF>> genes) {
+  public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatCore>> genes) {
     return new EmptySeatChromosome(genes, allSeats);
   }
 
   @Override
-  public Chromosome<EnumGene<SeatIF>> newInstance(ISeq<EnumGene<SeatIF>> genes) {
+  public Chromosome<EnumGene<SeatCore>> newInstance(ISeq<EnumGene<SeatCore>> genes) {
     return newSeatChromosome(genes);
   }
 
   @Override
-  public Chromosome<EnumGene<SeatIF>> newInstance() {
+  public Chromosome<EnumGene<SeatCore>> newInstance() {
     return new EmptySeatChromosome(new ArrayList<>(), allSeats);
   }
 

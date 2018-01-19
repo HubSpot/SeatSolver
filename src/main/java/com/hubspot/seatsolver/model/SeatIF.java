@@ -12,12 +12,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-@JsonDeserialize(as = SeatIF.class)
-@JsonSerialize(as = SeatIF.class)
-public interface SeatIF extends PointBase {
-  String id();
-
-  static SeatIF fromCsvRecord(CSVRecord record) {
+@JsonDeserialize(as = SeatCore.class)
+@JsonSerialize(as = SeatCore.class)
+public interface SeatCore extends SeatCore {
+  static SeatCore fromCsvRecord(CSVRecord record) {
     return Seat.builder()
         .x(Integer.parseInt(record.get("x")))
         .y(Integer.parseInt(record.get("y")))

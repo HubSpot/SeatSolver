@@ -3,22 +3,22 @@ package com.hubspot.seatsolver.genetic;
 import java.util.List;
 
 import com.google.common.base.Objects;
-import com.hubspot.seatsolver.model.SeatIF;
+import com.hubspot.seatsolver.model.SeatCore;
 
 import io.jenetics.Gene;
 import io.jenetics.util.RandomRegistry;
 
-public class SeatGene implements Gene<SeatIF, SeatGene> {
-  private final List<? extends SeatIF> allSeats;
-  private final SeatIF seat;
+public class SeatGene implements Gene<SeatCore, SeatGene> {
+  private final List<? extends SeatCore> allSeats;
+  private final SeatCore seat;
 
-  public SeatGene(List<? extends SeatIF> allSeats, SeatIF seat) {
+  public SeatGene(List<? extends SeatCore> allSeats, SeatCore seat) {
     this.allSeats = allSeats;
     this.seat = seat;
   }
 
   @Override
-  public SeatIF getAllele() {
+  public SeatCore getAllele() {
     return seat;
   }
 
@@ -29,7 +29,7 @@ public class SeatGene implements Gene<SeatIF, SeatGene> {
   }
 
   @Override
-  public SeatGene newInstance(SeatIF value) {
+  public SeatGene newInstance(SeatCore value) {
     return new SeatGene(allSeats, seat);
   }
 
@@ -38,7 +38,7 @@ public class SeatGene implements Gene<SeatIF, SeatGene> {
     return false;
   }
 
-  public SeatIF getSeatIF() {
+  public SeatCore getSeatCore() {
     return getAllele();
   }
 
@@ -58,11 +58,11 @@ public class SeatGene implements Gene<SeatIF, SeatGene> {
       return false;
     }
     SeatGene seatGene = (SeatGene) o;
-    return java.util.Objects.equals(getSeatIF(), seatGene.getSeatIF());
+    return java.util.Objects.equals(getSeatCore(), seatGene.getSeatCore());
   }
 
   @Override
   public int hashCode() {
-    return java.util.Objects.hash(getSeatIF());
+    return java.util.Objects.hash(getSeatCore());
   }
 }
