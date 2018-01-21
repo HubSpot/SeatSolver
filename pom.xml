@@ -7,14 +7,17 @@
   <parent>
     <groupId>com.hubspot</groupId>
     <artifactId>basepom</artifactId>
-    <version>18.1-SNAPSHOT</version>
+    <version>18.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>SeatSolver</artifactId>
   <version>1.0-SNAPSHOT</version>
 
   <properties>
+    <basepom.check.skip-findbugs>true</basepom.check.skip-findbugs>
+
     <project.build.targetJdk>1.8</project.build.targetJdk>
+    <koloboke.version>0.6.8</koloboke.version>
   </properties>
 
   <dependencyManagement>
@@ -27,23 +30,49 @@
       <dependency>
         <groupId>io.jenetics</groupId>
         <artifactId>jenetics</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.0-hs-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>info.leadinglight</groupId>
+        <artifactId>jdot</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>Quadtree</groupId>
+        <artifactId>Quadtree</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.immutables</groupId>
+        <artifactId>value</artifactId>
+        <version>2.2.10</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>koloboke-api-jdk8</artifactId>
+        <version>${koloboke.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.openhft</groupId>
+        <artifactId>koloboke-impl-jdk8</artifactId>
+        <version>${koloboke.version}</version>
+        <scope>runtime</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
     <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-assistedinject</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -58,6 +87,18 @@
       <artifactId>commons-csv</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jdk8</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
     </dependency>
@@ -65,6 +106,22 @@
       <groupId>org.immutables</groupId>
       <artifactId>value</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>info.leadinglight</groupId>
+      <artifactId>jdot</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>Quadtree</groupId>
+      <artifactId>Quadtree</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>koloboke-api-jdk8</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.openhft</groupId>
+      <artifactId>koloboke-impl-jdk8</artifactId>
     </dependency>
   </dependencies>
 

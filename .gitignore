@@ -1,6 +1,9 @@
 data/
 .idea/
 target/
+out/
+*.svg
+*.dot
 
 # Compiled class file
 *.class

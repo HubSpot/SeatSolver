@@ -1,64 +1,105 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
 import com.hubspot.seatsolver.grid.SeatGrid;
-import com.hubspot.seatsolver.model.Seat;
+import com.hubspot.seatsolver.model.SeatCore;
 
 import io.jenetics.Chromosome;
+import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
+import net.openhft.koloboke.collect.set.hash.HashObjSet;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 public class SeatGenotypeValidator {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeValidator.class);
 
   private final SeatGrid grid;
 
+  @Inject
   public SeatGenotypeValidator(SeatGrid grid) {
     this.grid = grid;
   }
 
-  public boolean validateGenotype(Genotype<SeatGene> genotype) {
+  public boolean validateGenotype(Genotype<EnumGene<SeatCore>> genotype) {
     LOG.trace("Validating genotype: {}", genotype);
 
-    Set<String> chosen = new HashSet<>();
-    for (Chromosome<SeatGene> chromosome : genotype) {
-      for (SeatGene gene : chromosome) {
-        if (chosen.contains(gene.getSeat().id())) {
+    HashObjSet<String> chosen = HashObjSets.getDefaultFactory().newMutableSet();
+    HashObjSet<String> empty = HashObjSets.getDefaultFactory().newMutableSet();
+    for (Chromosome<EnumGene<SeatCore>> chromosome : genotype) {
+      if (chromosome instanceof EmptySeatChromosome) {
+        chromosome.stream()
+            .map(gene -> gene.getAllele().id())
+            .forEach(empty::add);
+      }
+
+      for (EnumGene<SeatCore> gene : chromosome) {
+        if (chosen.contains(gene.getAllele().id())) {
           return false;
         }
 
-        chosen.add(gene.getSeat().id());
+        chosen.add(gene.getAllele().id());
       }
-    }
 
-    // now do adjacency
-    for (Chromosome<SeatGene> chromosome : genotype) {
-      List<Seat> seats = chromosome.stream()
-          .map(SeatGene::getSeat)
-          .collect(Collectors.toList());
-
-      if (seats.size() <= 1) {
+      // now do adjacency
+      if (chromosome.length() == 1 || chromosome instanceof EmptySeatChromosome) {
         continue;
       }
 
-      boolean allAdjacent = seats.stream()
-          .allMatch(seat -> {
-            return seats.stream().anyMatch(seat2 -> grid.isAdjacent(seat, seat2));
-          });
+      HashObjSet<SeatCore> seats = chromosome.stream()
+          .map(EnumGene::getAllele)
+          .collect(Collectors.toCollection(HashObjSets.getDefaultFactory()::newMutableSet));
 
-      if (!allAdjacent) {
+      SeatCore start = seats.iterator().next();
+
+      Set<SeatCore> connected = connectedSeatsForSeatCore(start, seats);
+      connectedSeatsForSeatCore(start, seats);
+
+      if (connected.size() < chromosome.length()) {
+        LOG.debug("Got unconnected chromosome: {}", chromosome.stream().collect(Collectors.toList()));
         return false;
       }
+    }
+
+    if (chosen.size() + empty.size() < grid.size()) {
+      return false;
     }
 
     LOG.trace("Found valid genotype: {}", genotype);
 
     return true;
+  }
+
+  private Set<SeatCore> connectedSeatsForSeatCore(SeatCore seat, Set<SeatCore> toFind) {
+    if (toFind.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    HashObjSet<SeatCore> toFindMinusSelf = HashObjSets.newMutableSet(toFind);
+    toFindMinusSelf.remove(seat);
+
+    Set<SeatCore> adjacentSeats = new HashSet<>(grid.getAdjacent(seat));
+    adjacentSeats.removeIf(s -> !toFind.contains(s));
+
+    HashObjSet<SeatCore> toFindMinusAdjacent = HashObjSets.newMutableSet(toFindMinusSelf);
+    toFindMinusAdjacent.removeAll(adjacentSeats);
+
+    Set<SeatCore> result = HashObjSets.newMutableSet(adjacentSeats);
+    result.add(seat);
+
+    for (SeatCore adjacentSeatCore: adjacentSeats) {
+      Set<SeatCore> nextConnected = connectedSeatsForSeatCore(adjacentSeatCore, toFindMinusAdjacent);
+      toFindMinusAdjacent.removeAll(nextConnected);
+      result.addAll(nextConnected);
+    }
+
+    return result;
   }
 }

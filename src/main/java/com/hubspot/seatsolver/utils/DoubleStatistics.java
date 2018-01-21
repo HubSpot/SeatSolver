@@ -12,6 +12,10 @@ public class DoubleStatistics extends DoubleSummaryStatistics {
 
   @Override
   public void accept(double value) {
+    if (value == 0) {
+      return;
+    }
+
     super.accept(value);
     double squareValue = value * value;
     simpleSumOfSquare += squareValue;
