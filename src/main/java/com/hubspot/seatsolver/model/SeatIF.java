@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-@JsonDeserialize(as = SeatCore.class)
-@JsonSerialize(as = SeatCore.class)
+@JsonDeserialize(as = Seat.class)
+@JsonSerialize(as = Seat.class)
 public interface SeatIF extends SeatCore {
   static SeatCore fromCsvRecord(CSVRecord record) {
     return Seat.builder()

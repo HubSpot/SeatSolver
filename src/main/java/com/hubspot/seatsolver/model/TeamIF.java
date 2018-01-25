@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
-@JsonSerialize(as = TeamCore.class)
-@JsonDeserialize(as = TeamCore.class)
+@JsonSerialize(as = Team.class)
+@JsonDeserialize(as = Team.class)
 public interface TeamIF extends TeamCore {
 }
