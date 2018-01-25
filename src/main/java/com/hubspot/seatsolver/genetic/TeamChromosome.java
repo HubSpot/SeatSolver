@@ -1,6 +1,5 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -236,14 +235,20 @@ public class TeamChromosome extends AbstractSeatChromosome {
     Set<SeatCore> newAdjacent = Sets.difference(allAdjacent, existing);
 
     Set<SeatCore> availableAdjacent = Sets.intersection(newAdjacent, available);
-    if (availableAdjacent.size() == 0) {
+    if (availableAdjacent.isEmpty()) {
       return Optional.empty();
     }
 
     Point center = centroid(existing.iterator());
-    // Get the nearest
-    return availableAdjacent.stream()
-        .min(Comparator.comparing(seat -> PointUtils.distance(seat, center)));
+    double minDistance = Double.MAX_VALUE;
+    SeatCore nearestSeat = null;
+    for (SeatCore seat : availableAdjacent) {
+      double myDistance = PointUtils.distance(seat, center);
+      if (myDistance < minDistance) {
+        nearestSeat = seat;
+      }
+    }
+    return Optional.ofNullable(nearestSeat);
   }
 
   @Override
