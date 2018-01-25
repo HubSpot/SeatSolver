@@ -42,6 +42,7 @@ public class SeatGenotypeValidator {
 
       for (EnumGene<SeatCore> gene : chromosome) {
         if (chosen.contains(gene.getAllele().id())) {
+          LOG.debug("Duplicate seat used: {}", gene.getAllele());
           return false;
         }
 
@@ -58,9 +59,7 @@ public class SeatGenotypeValidator {
           .collect(Collectors.toCollection(HashObjSets.getDefaultFactory()::newMutableSet));
 
       SeatCore start = seats.iterator().next();
-
       Set<SeatCore> connected = connectedSeatsForSeatCore(start, seats);
-      connectedSeatsForSeatCore(start, seats);
 
       if (connected.size() < chromosome.length()) {
         LOG.debug("Got unconnected chromosome: {}", chromosome.stream().collect(Collectors.toList()));
@@ -69,6 +68,7 @@ public class SeatGenotypeValidator {
     }
 
     if (chosen.size() + empty.size() < grid.size()) {
+      LOG.trace("Total selected seats including empty is not equal to grid seats ({} != {})", chosen.size() + empty.size(), grid.size());
       return false;
     }
 
@@ -78,10 +78,6 @@ public class SeatGenotypeValidator {
   }
 
   private Set<SeatCore> connectedSeatsForSeatCore(SeatCore seat, Set<SeatCore> toFind) {
-    if (toFind.isEmpty()) {
-      return Collections.emptySet();
-    }
-
     HashObjSet<SeatCore> toFindMinusSelf = HashObjSets.newMutableSet(toFind);
     toFindMinusSelf.remove(seat);
 

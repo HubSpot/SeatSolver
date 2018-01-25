@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.varunpant.quadtree.QuadTree;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSetMultimap;
@@ -19,6 +22,8 @@ import com.hubspot.seatsolver.model.SeatCore;
 
 @Singleton
 public class SeatGrid {
+  private static final Logger LOG = LoggerFactory.getLogger(SeatGrid.class);
+
   private static final int MAX_ADJ_OFFSET = 60;
   private static final int SEAT_WIDTH = 12;
   private static final int SEAT_HEIGHT = 14;
@@ -44,8 +49,8 @@ public class SeatGrid {
       }
     }
 
-    this.gridSizeX = maxX;
-    this.gridSizeY = maxY;
+    this.gridSizeX = maxX + 1;
+    this.gridSizeY = maxY + 1;
 
     this.seatQuadTree = new QuadTree<>(0, 0, maxX, maxY);
     seats.forEach(seat -> seatQuadTree.set(seat.x(), seat.y(), seat));

@@ -59,7 +59,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
 
     chromosomes.add(new EmptySeatChromosome(availableSeats, seats));
 
-    LOG.debug("Finished new genotype generation in {}ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
+    LOG.debug("Finished new genotype generation in {}ns", stopwatch.elapsed(TimeUnit.NANOSECONDS));
     return Genotype.of(chromosomes);
   }
 
