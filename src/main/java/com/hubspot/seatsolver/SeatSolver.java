@@ -1,5 +1,6 @@
 package com.hubspot.seatsolver;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -66,6 +67,11 @@ public class SeatSolver {
   @SuppressWarnings("unchecked")
   public Phenotype<EnumGene<SeatCore>, Double> run() throws Exception {
 
+    try {
+      config.getOutputDirectory().mkdirs();
+    } catch (Exception ignored) {
+    }
+
     long run =  System.currentTimeMillis();
     LOG.info("Building engine - Run {}", run);
 
@@ -74,7 +80,7 @@ public class SeatSolver {
       forkJoinPool = new ForkJoinPool(config.populationFilterParallelism().get());
     }
 
-    if (config.alterers().size() < 1) {
+    if (config.alterers().isEmpty()) {
       throw new IllegalArgumentException("Must specify at least one alterer!");
     }
 
@@ -116,7 +122,7 @@ public class SeatSolver {
         .peek(r -> {
           statistics.accept(r);
 
-          if (r.getTotalGenerations() % 100 == 0 || r.getTotalGenerations() == 1) {
+          if (r.getTotalGenerations() % config.getGenerationWriteFrequency() == 0 || r.getTotalGenerations() == 1) {
             writeGenotype(r, run);
           }
 
@@ -140,21 +146,25 @@ public class SeatSolver {
     boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
     LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
 
-    genotypeWriter.write(result.getGenotype(), "out/solution-" + run + ".json");
-    GenotypeVisualizer.outputGraphViz(result.getGenotype(), "out/out-" + run + ".dot");
+    genotypeWriter.write(result.getGenotype(), getPath("solution-" + run + ".json"));
+    GenotypeVisualizer.outputGraphViz(result.getGenotype(), getPath("out-" + run + ".dot"));
 
     return result;
+  }
+
+  private String getPath(String filename) {
+    return new File(config.getOutputDirectory(), filename).getAbsolutePath();
   }
 
   private void writeGenotype(EvolutionResult<EnumGene<SeatCore>, Double> result, long run) {
     try {
       GenotypeVisualizer.outputGraphViz(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/run-%d-gen-%06d.dot", run, result.getTotalGenerations())
+          getPath(String.format("run-%d-gen-%06d.dot", run, result.getTotalGenerations()))
       );
       genotypeWriter.write(
           result.getBestPhenotype().getGenotype(),
-          String.format("out/run-%d-gen-%06d.json", run, result.getTotalGenerations())
+          getPath(String.format("run-%d-gen-%06d.json", run, result.getTotalGenerations()))
       );
     } catch (IOException e) {
       throw new RuntimeException(e);

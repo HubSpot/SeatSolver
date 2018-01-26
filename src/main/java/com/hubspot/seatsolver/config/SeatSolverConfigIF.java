@@ -1,5 +1,6 @@
 package com.hubspot.seatsolver.config;
 
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -26,6 +27,16 @@ public interface SeatSolverConfigIF {
   List<Alterer<EnumGene<SeatCore>, Double>> alterers();
 
   Optional<Integer> populationFilterParallelism();
+
+  @Default
+  default int getGenerationWriteFrequency() {
+    return 100;
+  }
+
+  @Default
+  default File getOutputDirectory() {
+    return new File(System.getProperty("java.io.tmpdir" , "out"));
+  }
 
   @Default
   default Executor executor() {
