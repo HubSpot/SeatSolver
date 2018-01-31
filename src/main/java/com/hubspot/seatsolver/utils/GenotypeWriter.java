@@ -26,25 +26,28 @@ public class GenotypeWriter {
     this.objectMapper = objectMapper;
   }
 
+  public List<TeamAssignment> buildAssignments(Genotype<EnumGene<SeatCore>> genotype) {
+    return genotype.stream()
+        .map(c -> {
+          if (c instanceof EmptySeatChromosome) {
+            EmptySeatChromosome emptySeatChromosome = ((EmptySeatChromosome) c);
+            return TeamAssignment.builder()
+                .seats(seatsFromChromosome(emptySeatChromosome))
+                .build();
+          }
+
+          TeamChromosome chromosome = ((TeamChromosome) c);
+          return TeamAssignment.builder()
+              .team(chromosome.getTeam())
+              .seats(seatsFromChromosome(chromosome))
+              .build();
+        })
+        .collect(Collectors.toList());
+  }
+
   public void write(Genotype<EnumGene<SeatCore>> genotype, String filename) throws IOException {
     try (FileWriter writer = new FileWriter(filename)) {
-      List<TeamAssignment> assignments = genotype.stream()
-          .map(c -> {
-            if (c instanceof EmptySeatChromosome) {
-              EmptySeatChromosome emptySeatChromosome = ((EmptySeatChromosome) c);
-              return TeamAssignment.builder()
-                  .seats(seatsFromChromosome(emptySeatChromosome))
-                  .build();
-            }
-
-            TeamChromosome chromosome = ((TeamChromosome) c);
-            return TeamAssignment.builder()
-                .team(chromosome.getTeam())
-                .seats(seatsFromChromosome(chromosome))
-                .build();
-          })
-          .collect(Collectors.toList());
-
+      List<TeamAssignment> assignments = buildAssignments(genotype);
       writer.write(objectMapper.writeValueAsString(assignments));
     }
   }

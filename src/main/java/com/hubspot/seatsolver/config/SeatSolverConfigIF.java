@@ -28,6 +28,8 @@ public interface SeatSolverConfigIF {
 
   Optional<Integer> populationFilterParallelism();
 
+  Optional<SolutionListener> solutionListener();
+
   @Default
   default int getGenerationWriteFrequency() {
     return 100;

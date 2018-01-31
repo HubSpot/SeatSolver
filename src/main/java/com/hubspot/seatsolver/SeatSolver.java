@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
@@ -22,6 +23,8 @@ import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
+import com.hubspot.seatsolver.model.AssignmentResult;
+import com.hubspot.seatsolver.model.PopulationResult;
 import com.hubspot.seatsolver.model.SeatCore;
 import com.hubspot.seatsolver.model.TeamCore;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
@@ -115,7 +118,7 @@ public class SeatSolver {
         })
     );
 
-    Phenotype<EnumGene<SeatCore>, Double> result = engine.stream()
+    EvolutionResult<EnumGene<SeatCore>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
         .limit(Limits.byExecutionTime(Duration.of(8, ChronoUnit.HOURS)))
         .limit(100000)
@@ -124,6 +127,10 @@ public class SeatSolver {
 
           if (r.getTotalGenerations() % config.getGenerationWriteFrequency() == 0 || r.getTotalGenerations() == 1) {
             writeGenotype(r, run);
+            config.solutionListener().ifPresent(
+                listener -> listener.checkpointSolution(buildPopulationResult(r), r.getTotalGenerations())
+            );
+
           }
 
           LOG.info(
@@ -138,18 +145,25 @@ public class SeatSolver {
           LOG.debug("Got intermediate result genotype: {}",
               r.getBestPhenotype());
         })
-        .collect(EvolutionResult.toBestPhenotype());
+        .reduce((a, b) -> b)
+        .orElse(null);
 
     LOG.info("Finished evolving in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
     System.out.println(statistics);
 
-    boolean isValidSolution = this.genotypeValidator.validateGenotype(result.getGenotype());
-    LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, result.getRawFitness(), result.getGenotype());
+    Phenotype<EnumGene<SeatCore>, Double> best = result.getBestPhenotype();
 
-    genotypeWriter.write(result.getGenotype(), getPath("solution-" + run + ".json"));
-    GenotypeVisualizer.outputGraphViz(result.getGenotype(), getPath("out-" + run + ".dot"));
+    boolean isValidSolution = this.genotypeValidator.validateGenotype(best.getGenotype());
+    LOG.info("\n\n************\nValid? {}\nFitness: {}\nGenotype:\n{}\n************\n", isValidSolution, best.getRawFitness(), best.getGenotype());
+    if (isValidSolution) {
+      config.solutionListener().ifPresent(
+          listener -> listener.completeSolution(buildPopulationResult(result))
+      );
+    }
+    genotypeWriter.write(best.getGenotype(), getPath("solution-" + run + ".json"));
+    GenotypeVisualizer.outputGraphViz(best.getGenotype(), getPath("out-" + run + ".dot"));
 
-    return result;
+    return best;
   }
 
   private String getPath(String filename) {
@@ -205,5 +219,23 @@ public class SeatSolver {
           return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
         })
         .filter(d -> d > 0);
+  }
+
+  private PopulationResult buildPopulationResult(EvolutionResult<EnumGene<SeatCore>, Double> result) {
+    List<AssignmentResult> top10Results = result.getPopulation().stream()
+        .sorted(Comparator.<Phenotype<? ,Double>, Double>comparing(Phenotype::getFitness).reversed())
+        .limit(10)
+        .map(gene -> AssignmentResult.builder()
+            .addAllTeamAssignments(genotypeWriter.buildAssignments(gene.getGenotype()))
+            .fitness(gene.getRawFitness())
+            .build())
+        .collect(Collectors.toList());
+    return PopulationResult.builder()
+        .addAllTopTen(top10Results)
+        .best(AssignmentResult.builder()
+            .addAllTeamAssignments(genotypeWriter.buildAssignments(result.getBestPhenotype().getGenotype()))
+            .fitness(result.getBestPhenotype().getRawFitness())
+            .build())
+        .build();
   }
 }
