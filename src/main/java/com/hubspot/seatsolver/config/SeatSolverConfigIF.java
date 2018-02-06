@@ -45,4 +45,9 @@ public interface SeatSolverConfigIF {
   default Executor executor() {
     return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
   }
+
+  @Default
+  default int getMaxAdjacentSeatDistance() {
+    return 40;
+  }
 }

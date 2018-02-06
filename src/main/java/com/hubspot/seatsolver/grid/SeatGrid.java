@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.SeatCore;
@@ -24,7 +25,6 @@ import com.hubspot.seatsolver.model.SeatCore;
 public class SeatGrid {
   private static final Logger LOG = LoggerFactory.getLogger(SeatGrid.class);
 
-  private static final int MAX_ADJ_OFFSET = 60;
   private static final int SEAT_WIDTH = 12;
   private static final int SEAT_HEIGHT = 14;
 
@@ -33,9 +33,10 @@ public class SeatGrid {
   private final double gridSizeX;
   private final double gridSizeY;
   private final int size;
+  private final int maxAdjOffset;
 
   @Inject
-  public SeatGrid(List<SeatCore> seats) {
+  public SeatGrid(List<SeatCore> seats, SeatSolverConfig config) {
     this.size = seats.size();
     double maxX = 0;
     double maxY = 0;
@@ -62,6 +63,7 @@ public class SeatGrid {
     });
 
     this.adjacencyMap = ImmutableSetMultimap.copyOf(adjMap);
+    this.maxAdjOffset = config.getMaxAdjacentSeatDistance();
   }
 
   public int size() {
@@ -73,10 +75,10 @@ public class SeatGrid {
   }
 
   private Set<SeatCore> findAllAdjacent(SeatCore seat) {
-    double xMin = seat.x() - MAX_ADJ_OFFSET;
-    double yMin = seat.y() - MAX_ADJ_OFFSET;
-    double xMax = seat.x() + MAX_ADJ_OFFSET;
-    double yMax = seat.y() + MAX_ADJ_OFFSET;
+    double xMin = seat.x() - maxAdjOffset;
+    double yMin = seat.y() - maxAdjOffset;
+    double xMax = seat.x() + maxAdjOffset;
+    double yMax = seat.y() + maxAdjOffset;
 
     if (xMin < 0) {
       xMin = 0;
