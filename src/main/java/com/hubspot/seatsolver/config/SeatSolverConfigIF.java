@@ -37,6 +37,11 @@ public interface SeatSolverConfigIF {
   }
 
   @Default
+  default boolean parallelPhenotypeGeneration() {
+    return false;
+  }
+
+  @Default
   default File getOutputDirectory() {
     return new File(System.getProperty("java.io.tmpdir" , "out"));
   }

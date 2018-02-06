@@ -102,6 +102,7 @@ public class SeatSolver {
         .executor(config.executor())
         .maximalPhenotypeAge(100)
         .alterers(first, alterers)
+        .parallelPhenotypeGeneration(config.parallelPhenotypeGeneration())
         .build();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
