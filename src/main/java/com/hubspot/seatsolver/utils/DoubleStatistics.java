@@ -1,11 +1,16 @@
 package com.hubspot.seatsolver.utils;
 
+import java.math.RoundingMode;
 import java.util.DoubleSummaryStatistics;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collector;
+
+import com.google.common.math.DoubleMath;
 
 public class DoubleStatistics extends DoubleSummaryStatistics {
 
   private double sumOfSquare = 0.0d;
+  private double[] reservior = new double[50];
   private double sumOfSquareCompensation; // Low order bits of sum
   private double simpleSumOfSquare; // Used to compute right sum for
   // non-finite inputs
@@ -15,7 +20,14 @@ public class DoubleStatistics extends DoubleSummaryStatistics {
     if (value == 0) {
       return;
     }
-
+    if (getCount() < reservior.length) {
+      reservior[(int) getCount()] = value;
+    } else {
+      int j = ThreadLocalRandom.current().nextInt((int) getCount() + 1);
+      if (j < reservior.length) {
+        reservior[j] = value;
+      }
+    }
     super.accept(value);
     double squareValue = value * value;
     simpleSumOfSquare += squareValue;
@@ -50,6 +62,10 @@ public class DoubleStatistics extends DoubleSummaryStatistics {
     double sumOfSquare = getSumOfSquare();
     double average = getAverage();
     return count > 0 ? Math.sqrt((sumOfSquare - count * Math.pow(average, 2)) / (count - 1)) : 0.0d;
+  }
+
+  public double getApproxPerentile(double percentile) {
+    return reservior[Math.min(reservior.length - 1, DoubleMath.roundToInt(reservior.length * percentile / 100., RoundingMode.HALF_EVEN))];
   }
 
   public static Collector<Double, ?, DoubleStatistics> collector() {

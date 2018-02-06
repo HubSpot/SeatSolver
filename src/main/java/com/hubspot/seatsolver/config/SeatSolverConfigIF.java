@@ -21,7 +21,6 @@ import io.jenetics.EnumGene;
     typeImmutable = "*"
 )
 public interface SeatSolverConfigIF {
-
   DataLoader dataLoader();
 
   List<Alterer<EnumGene<SeatCore>, Double>> alterers();
@@ -29,6 +28,8 @@ public interface SeatSolverConfigIF {
   Optional<Integer> populationFilterParallelism();
 
   Optional<SolutionListener> solutionListener();
+
+  Optional<Double> intraTeamPercentile();
 
   @Default
   default int getGenerationWriteFrequency() {

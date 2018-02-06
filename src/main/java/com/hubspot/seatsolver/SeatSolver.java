@@ -211,9 +211,14 @@ public class SeatSolver {
           adjacencyDists(chromosome, chromosomeByTeamCore).forEach(adjacencyStats);
         });
 
-    double intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
+    double intraTeamScaled;
+    if (config.intraTeamPercentile().isPresent()) {
+      intraTeamScaled = intraTeamStats.getApproxPerentile(config.intraTeamPercentile().get());
+    } else {
+      intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
+    }
     double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
-    return (intraTeamScaled / 2) + adjacencyScaled;
+    return intraTeamScaled + adjacencyScaled;
   }
 
   private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeamCore) {
