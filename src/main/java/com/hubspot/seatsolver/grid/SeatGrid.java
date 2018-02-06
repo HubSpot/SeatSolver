@@ -20,6 +20,7 @@ import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.SeatCore;
+import com.hubspot.seatsolver.utils.PointUtils;
 
 @Singleton
 public class SeatGrid {
@@ -37,6 +38,7 @@ public class SeatGrid {
 
   @Inject
   public SeatGrid(List<SeatCore> seats, SeatSolverConfig config) {
+    this.maxAdjOffset = config.getMaxAdjacentSeatDistance();
     this.size = seats.size();
     double maxX = 0;
     double maxY = 0;
@@ -63,7 +65,6 @@ public class SeatGrid {
     });
 
     this.adjacencyMap = ImmutableSetMultimap.copyOf(adjMap);
-    this.maxAdjOffset = config.getMaxAdjacentSeatDistance();
   }
 
   public int size() {
@@ -101,6 +102,11 @@ public class SeatGrid {
     Set<SeatCore> neighbors = new HashSet<>();
     for (com.github.varunpant.quadtree.Point<SeatCore> point : points) {
       if (point.getValue() == seat) {
+        continue;
+      }
+
+      double dist = PointUtils.distance(seat, point.getValue());
+      if (dist > maxAdjOffset) {
         continue;
       }
 
