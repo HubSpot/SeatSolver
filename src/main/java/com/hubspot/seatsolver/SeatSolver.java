@@ -130,18 +130,26 @@ public class SeatSolver {
             config.solutionListener().ifPresent(
                 listener -> listener.checkpointSolution(buildPopulationResult(r), r.getTotalGenerations())
             );
-
+            LOG.info(
+                "Generation {} ({} ms/gen):\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
+                r.getGeneration(),
+                stopwatch.elapsed(TimeUnit.MILLISECONDS) / r.getTotalGenerations(),
+                r.getInvalidCount(),
+                r.getKillCount(),
+                r.getWorstFitness(),
+                r.getBestFitness()
+            );
+          } else {
+            LOG.debug(
+                "Generation {} ({} ms/gen):\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
+                r.getGeneration(),
+                stopwatch.elapsed(TimeUnit.MILLISECONDS) / r.getTotalGenerations(),
+                r.getInvalidCount(),
+                r.getKillCount(),
+                r.getWorstFitness(),
+                r.getBestFitness()
+            );
           }
-
-          LOG.info(
-              "Generation {} ({} ms/gen):\n  Invalid: {}\n  Killed: {}\n  Worst: {}\n  Best: {}",
-              r.getGeneration(),
-              stopwatch.elapsed(TimeUnit.MILLISECONDS) / r.getTotalGenerations(),
-              r.getInvalidCount(),
-              r.getKillCount(),
-              r.getWorstFitness(),
-              r.getBestFitness()
-          );
           LOG.debug("Got intermediate result genotype: {}",
               r.getBestPhenotype());
         })
