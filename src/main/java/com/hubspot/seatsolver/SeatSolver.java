@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,22 +18,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
 import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
+import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.AssignmentResult;
 import com.hubspot.seatsolver.model.PopulationResult;
 import com.hubspot.seatsolver.model.SeatCore;
-import com.hubspot.seatsolver.model.TeamCore;
 import com.hubspot.seatsolver.utils.DoubleStatistics;
 import com.hubspot.seatsolver.utils.GenotypeVisualizer;
 import com.hubspot.seatsolver.utils.GenotypeWriter;
 import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Alterer;
+import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 import io.jenetics.Phenotype;
@@ -46,22 +49,19 @@ public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
   private final SeatSolverConfig config;
-  private final List<SeatCore> seats;
-  private final List<TeamCore> teams;
+  private final SeatGrid grid;
   private final SeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
 
   @Inject
   public SeatSolver(SeatSolverConfig config,
-                    List<SeatCore> seats,
-                    List<TeamCore> teams,
+                    SeatGrid grid,
                     SeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter) {
     this.config = config;
-    this.seats = seats;
-    this.teams = teams;
+    this.grid = grid;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;
@@ -202,6 +202,7 @@ public class SeatSolver {
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
     DoubleStatistics intraTeamStats = new DoubleStatistics();
+    DoubleStatistics squarenessStats = new DoubleStatistics();
     DoubleStatistics adjacencyStats = new DoubleStatistics();
 
     genotype.stream()
@@ -209,6 +210,7 @@ public class SeatSolver {
         .forEach(genes -> {
           TeamChromosome chromosome = ((TeamChromosome) genes);
           intraTeamStats.accept(chromosome.meanWeightedSeatDistance());
+          squarenessStats.accept(squarenessScore(genes));
           adjacencyDists(chromosome, chromosomeByTeamCore).forEach(adjacencyStats);
         });
 
@@ -219,7 +221,8 @@ public class SeatSolver {
       intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
     }
     double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
-    return intraTeamScaled + adjacencyScaled;
+    double squarenessScaled = squarenessStats.getSum() * squarenessStats.getStandardDeviation();
+    return intraTeamScaled + adjacencyScaled + squarenessScaled;
   }
 
   private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeamCore) {
@@ -233,6 +236,25 @@ public class SeatSolver {
           return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
         })
         .filter(d -> d > 0);
+  }
+
+  private double squarenessScore(Chromosome<EnumGene<SeatCore>> genes) {
+    if (genes.length() <= 1) {
+      return 1;
+    }
+
+    double nPairs = 0;
+    double nAdjacent = 0;
+    Set<SeatCore> seats = genes.toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet());
+    Set<SeatCore> remaining = Sets.newHashSet(seats);
+    for (SeatCore seat : seats) {
+      remaining.remove(seat);
+
+      nPairs += seats.size();
+      nAdjacent += Sets.intersection(grid.getAdjacent(seat), remaining).size();
+    }
+
+    return nPairs / nAdjacent;
   }
 
   private PopulationResult buildPopulationResult(EvolutionResult<EnumGene<SeatCore>, Double> result) {
