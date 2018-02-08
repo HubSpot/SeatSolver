@@ -2,11 +2,16 @@ package com.hubspot.seatsolver.config;
 
 import org.immutables.value.Value;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 @Value.Immutable
 @Value.Style(
     typeAbstract = {"*IF"},
     typeImmutable = "*"
 )
+@JsonSerialize(as = SeatSolverParams.class)
+@JsonDeserialize(as = SeatSolverParams.class)
 public interface SeatSolverParamsIF {
   @Value.Default
   default double intraTeamScoreWeight() {
