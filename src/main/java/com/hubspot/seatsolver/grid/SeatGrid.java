@@ -38,7 +38,7 @@ public class SeatGrid {
 
   @Inject
   public SeatGrid(List<SeatCore> seats, SeatSolverConfig config) {
-    this.maxAdjOffset = config.getMaxAdjacentSeatDistance();
+    this.maxAdjOffset = config.seatSolverParams().maxAdjacentSeatDistance();
     this.size = seats.size();
     double maxX = 0;
     double maxY = 0;

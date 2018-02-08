@@ -215,14 +215,16 @@ public class SeatSolver {
         });
 
     double intraTeamScaled;
-    if (config.intraTeamPercentile().isPresent()) {
-      intraTeamScaled = intraTeamStats.getApproxPerentile(config.intraTeamPercentile().get());
+    if (config.seatSolverParams().intraTeamPercentile() > 0) {
+      intraTeamScaled = intraTeamStats.getApproxPerentile(config.seatSolverParams().intraTeamPercentile());
     } else {
       intraTeamScaled = intraTeamStats.getSum() * intraTeamStats.getStandardDeviation();
     }
     double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
     double squarenessScaled = squarenessStats.getSum() * squarenessStats.getStandardDeviation();
-    return intraTeamScaled + adjacencyScaled + squarenessScaled;
+    return config.seatSolverParams().intraTeamScoreWeight() * intraTeamScaled +
+        config.seatSolverParams().interTeamScoreWeight() * adjacencyScaled +
+        config.seatSolverParams().intraTeamSquarenessWeight() * squarenessScaled;
   }
 
   private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeamCore) {

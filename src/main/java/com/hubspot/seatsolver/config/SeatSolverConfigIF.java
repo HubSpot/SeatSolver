@@ -29,7 +29,10 @@ public interface SeatSolverConfigIF {
 
   Optional<SolutionListener> solutionListener();
 
-  Optional<Double> intraTeamPercentile();
+  @Default
+  default SeatSolverParams seatSolverParams() {
+    return SeatSolverParams.builder().build();
+  }
 
   @Default
   default int getGenerationWriteFrequency() {
@@ -49,10 +52,5 @@ public interface SeatSolverConfigIF {
   @Default
   default Executor executor() {
     return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-  }
-
-  @Default
-  default int getMaxAdjacentSeatDistance() {
-    return 40;
   }
 }
