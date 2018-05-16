@@ -209,7 +209,7 @@ public class SeatSolver {
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .forEach(genes -> {
           TeamChromosome chromosome = ((TeamChromosome) genes);
-          intraTeamStats.accept(chromosome.meanWeightedSeatDistance());
+          intraTeamStats.accept(chromosome.calculateTeamDistanceCost());
           squarenessStats.accept(squarenessScore(genes));
           adjacencyDists(chromosome, chromosomeByTeamCore).forEach(adjacencyStats);
         });

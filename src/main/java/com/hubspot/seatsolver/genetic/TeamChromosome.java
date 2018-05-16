@@ -39,6 +39,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
+  private AtomicDouble teamDistanceCost = new AtomicDouble(-1);
 
   public TeamChromosome(SeatGrid seatGrid,
                         ISeq<SeatCore> allSeats,
@@ -79,6 +80,27 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return seatGrid;
   }
 
+
+  public double calculateTeamDistanceCost() {
+    Double dist = teamDistanceCost.get();
+    if (dist >= 0) {
+      return dist;
+    }
+    ISeq<EnumGene<SeatCore>> seatsSequence = toSeq();
+    int seatLen = seatsSequence.size();
+    double maxDistance = 0.;
+    for (int i = 0; i < seatLen; ++i) {
+      for (int j = i + 1; j < seatLen; ++j) {
+        SeatCore seatA = seatsSequence.get(i).getAllele();
+        SeatCore seatB = seatsSequence.get(j).getAllele();
+        maxDistance = Math.max(maxDistance,
+            PointUtils.distance(seatA, seatB));
+      }
+    }
+    teamDistanceCost.set(maxDistance);
+    return maxDistance;
+  }
+
   public double meanWeightedSeatDistance() {
     Double dist = meanWeightedSeatDist.get();
     if (dist < 0) {
@@ -90,30 +112,24 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   private double calculateMeanWeightedSeatDistance() {
-    // mean of pairwise distances
-    List<SeatCore> seats = toSeq().stream()
-        .map(EnumGene::getAllele)
-        .collect(Collectors.toList());
-
-    double totalDist = 0;
+    double totalDist = 0.;
     int pairs = 0;
-    for (SeatCore seat : seats) {
-      for (SeatCore other : seats) {
-        if (seat == other) {
-          continue;
-        }
+    ISeq<EnumGene<SeatCore>> seatsSequence = toSeq();
 
-        double dist = PointUtils.distance(seat, other);
-        totalDist += dist;
+    int seatLen = seatsSequence.size();
+    for (int i = 0; i < seatLen; ++i) {
+      for (int j = i + 1; j < seatLen; ++j) {
+        SeatCore seatA = seatsSequence.get(i).getAllele();
+        SeatCore seatB = seatsSequence.get(j).getAllele();
+        totalDist += PointUtils.distance(seatA, seatB);
         pairs++;
       }
     }
-
     if (pairs == 0) {
       return 0;
     }
 
-    return totalDist / ((double) pairs);
+    return totalDist / pairs;
   }
 
   public Point centroid() {

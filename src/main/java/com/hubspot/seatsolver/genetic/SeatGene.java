@@ -2,7 +2,7 @@ package com.hubspot.seatsolver.genetic;
 
 import java.util.List;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.hubspot.seatsolver.model.SeatCore;
 
 import io.jenetics.Gene;
@@ -44,7 +44,7 @@ public class SeatGene implements Gene<SeatCore, SeatGene> {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this)
+    return MoreObjects.toStringHelper(this)
         .add("seat", seat)
         .toString();
   }
