@@ -25,7 +25,7 @@ public interface AdjacencyIF {
 
   ImmutableMap<String, Double> WEIGHT_BY_TYPE = ImmutableMap.of(
       "levenshtein", 0.5,
-      "techLead", 3.,
+      "techLead", 10.,
       "productLead", 1.,
       "team-affinity", 5.,
       "productManagers", 2.

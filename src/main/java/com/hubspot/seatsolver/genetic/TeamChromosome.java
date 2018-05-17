@@ -65,6 +65,20 @@ public class TeamChromosome extends AbstractSeatChromosome {
     this.team = team;
   }
 
+  public SeatCore getSeat(int i) {
+    return getGene(i).getAllele();
+  }
+
+  public boolean hasAnyAdjacent(SeatCore seat) {
+    Set<SeatCore> adjacent = seatGrid.getAdjacent(seat);
+    for (EnumGene<SeatCore> gene : this) {
+      if (adjacent.contains(gene.getAllele())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<SeatCore> allSeats,
                                                       BitSet selectedSeats) {
     MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(selectedSeats.cardinality());

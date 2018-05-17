@@ -227,17 +227,45 @@ public class SeatSolver {
         config.seatSolverParams().intraTeamSquarenessWeight() * squarenessScaled;
   }
 
-  private DoubleStream adjacencyDists(TeamChromosome chromosome, Map<String, TeamChromosome> chromosomeByTeamCore) {
-    return chromosome.getTeam().wantsAdjacent().stream()
-        .mapToDouble(adj -> {
-          TeamChromosome other = chromosomeByTeamCore.get(adj.id());
-          if (other == null) {
-            return ((double) 0);
-          }
+  private DoubleStream adjacencyDists(TeamChromosome chromosome,
+                                      Map<String, TeamChromosome> chromosomeByTeamCore) {
+    if (chromosome.length() == 1) {
+      boolean hasAnyAdjacentTeam = hasAnyAdjacentTeam(chromosome, chromosomeByTeamCore);
+      if (hasAnyAdjacentTeam) {
+        return DoubleStream.of(0.);
+      } else {
+        return DoubleStream.of(1e6);
+      }
+    } else {
+      return chromosome.getTeam().wantsAdjacent().stream()
+          .mapToDouble(adj -> {
+            TeamChromosome other = chromosomeByTeamCore.get(adj.id());
+            if (other == null) {
+              return ((double) 0);
+            }
+            return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
+          })
+          .filter(d -> d > 0);
+    }
+  }
 
-          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
-        })
-        .filter(d -> d > 0);
+  private boolean hasAnyAdjacentTeam(TeamChromosome chromosome,
+                                     Map<String, TeamChromosome> chromosomeByTeamCore) {
+    SeatCore firstSeat = chromosome.getSeat(0);
+    boolean sawNoTeam = true;
+    for (Map.Entry<String, Double> wantsAdjacent : chromosome.getTeam().effectiveWeightsByTeamId().entrySet()) {
+      if (wantsAdjacent.getValue() < 0.01) {
+        continue;
+      }
+      TeamChromosome otherTeam = chromosomeByTeamCore.get(wantsAdjacent.getKey());
+      if (otherTeam == null || otherTeam.length() <= 1) {
+        continue;
+      }
+      if (otherTeam.hasAnyAdjacent(firstSeat)) {
+        return true;
+      }
+    }
+    return sawNoTeam;
   }
 
   private double squarenessScore(Chromosome<EnumGene<SeatCore>> genes) {
