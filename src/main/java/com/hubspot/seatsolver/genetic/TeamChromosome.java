@@ -249,14 +249,18 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @VisibleForTesting
   static int getValueOfIndex(BitSet availableSeats, int idx) {
-    int index = 0;
+    int lastIndex = -1;
+    int currentCount = 0;
     for (int i = availableSeats.nextSetBit(0); i >= 0; i = availableSeats.nextSetBit(i + 1)) {
       if (i == Integer.MAX_VALUE) {
         break;
       }
-      index = i;
+      if (currentCount++ > idx) {
+        break;
+      }
+      lastIndex = i;
     }
-    return index;
+    return lastIndex;
   }
 
   private static BitSet selectBlock(SeatGrid grid,
