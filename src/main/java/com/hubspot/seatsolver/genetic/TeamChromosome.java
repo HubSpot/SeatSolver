@@ -337,7 +337,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     adjacent.and(availableForSelection);
 
 
-    Point center = centroid(existing.iterator());
+    //Point center = centroid(existing.iterator());
     double minDistance = Double.MAX_VALUE;
     int nearestSeat = -1;
 
@@ -345,8 +345,10 @@ public class TeamChromosome extends AbstractSeatChromosome {
       if (i == Integer.MAX_VALUE) {
         break;
       }
-
-      double myDistance = PointUtils.distance(allSeats.get(i), center);
+      double myDistance = 0;
+      for (SeatCore existingSeat : existing) {
+        myDistance = Math.max(PointUtils.distance(allSeats.get(i), existingSeat), myDistance);
+      }
       if (myDistance < minDistance) {
         nearestSeat = i;
         minDistance = myDistance;
