@@ -58,14 +58,15 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<SeatCore> allSeats,
                                                       BitSet selectedSeats) {
-    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(selectedSeats.size());
+    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(selectedSeats.cardinality());
 
     int idx = 0;
     for (int i = selectedSeats.nextSetBit(0); i >= 0; i = selectedSeats.nextSetBit(i + 1)) {
       if (i == Integer.MAX_VALUE) {
         break;
       }
-      result.set(idx++, EnumGene.<SeatCore>of(i, allSeats.get(i)));
+      int current = idx++;
+      result.set(current, EnumGene.<SeatCore>of(i, allSeats));
     }
     return result.toISeq();
   }
@@ -250,14 +251,14 @@ public class TeamChromosome extends AbstractSeatChromosome {
                                     ISeq<SeatCore> seats,
                                     BitSet availableSeats,
                                     int size) {
-    BitSet lastSelected = new BitSet(size);
+    BitSet lastSelected = new BitSet(seats.size());
 
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
       // pick a random starting point
       int randomSeatIndex = getAvailableIndex(availableSeats);
-      SeatCore seat = seats.get(randomSeatIndex);
 
-      BitSet selected = new BitSet(size);
+      BitSet selected = new BitSet(seats.size());
+      selected.set(randomSeatIndex);
 
       for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
         if (selected.cardinality() == size) {
@@ -297,7 +298,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
       allAdjacent.addAll(grid.getAdjacent(allSeats.get(i)));
     }
 
-    BitSet availableForSelection = (BitSet) availableSeats;
+    BitSet availableForSelection = (BitSet) availableSeats.clone();
     availableForSelection.andNot(selected);
 
     BitSet adjacent = new BitSet(allSeats.size());

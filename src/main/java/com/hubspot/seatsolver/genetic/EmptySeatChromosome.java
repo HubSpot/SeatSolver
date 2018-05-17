@@ -27,14 +27,15 @@ public class EmptySeatChromosome extends AbstractSeatChromosome {
 
   private static ISeq<EnumGene<SeatCore>> buildSeq(ISeq<SeatCore> allSeats,
                                                    BitSet availableSeatIndices) {
-    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(availableSeatIndices.size());
+    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(availableSeatIndices.cardinality());
 
     int idx = 0;
     for (int i = availableSeatIndices.nextSetBit(0); i >= 0; i = availableSeatIndices.nextSetBit(i + 1)) {
       if (i == Integer.MAX_VALUE) {
         break;
       }
-      result.set(idx++, EnumGene.<SeatCore>of(i, allSeats.get(i)));
+      int current = idx++;
+      result.set(current, EnumGene.<SeatCore>of(i, allSeats));
     }
     return result.toISeq();
   }
