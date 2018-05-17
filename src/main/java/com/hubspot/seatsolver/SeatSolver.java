@@ -229,24 +229,15 @@ public class SeatSolver {
 
   private DoubleStream adjacencyDists(TeamChromosome chromosome,
                                       Map<String, TeamChromosome> chromosomeByTeamCore) {
-    if (chromosome.length() == 1) {
-      boolean hasAnyAdjacentTeam = hasAnyAdjacentTeam(chromosome, chromosomeByTeamCore);
-      if (hasAnyAdjacentTeam) {
-        return DoubleStream.of(0.);
-      } else {
-        return DoubleStream.of(1e6);
-      }
-    } else {
-      return chromosome.getTeam().wantsAdjacent().stream()
-          .mapToDouble(adj -> {
-            TeamChromosome other = chromosomeByTeamCore.get(adj.id());
-            if (other == null) {
-              return ((double) 0);
-            }
-            return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
-          })
-          .filter(d -> d > 0);
-    }
+    return chromosome.getTeam().wantsAdjacent().stream()
+        .mapToDouble(adj -> {
+          TeamChromosome other = chromosomeByTeamCore.get(adj.id());
+          if (other == null) {
+            return ((double) 0);
+          }
+          return Math.abs(PointUtils.distance(chromosome.centroid(), other.centroid())) * adj.effectiveWeight();
+        })
+        .filter(d -> d > 0);
   }
 
   private boolean hasAnyAdjacentTeam(TeamChromosome chromosome,
