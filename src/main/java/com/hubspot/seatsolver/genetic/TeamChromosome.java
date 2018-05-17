@@ -243,8 +243,17 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   private static int getAvailableIndex(BitSet availableSeats) {
-    int availableSeatOffset = RandomRegistry.getRandom().nextInt(availableSeats.cardinality());
-    return getValueOfIndex(availableSeats, availableSeatOffset);
+    if (((double) availableSeats.cardinality()) / availableSeats.size() > 0.01) {
+      while (true) {
+        int offset = RandomRegistry.getRandom().nextInt(availableSeats.size());
+        if (availableSeats.get(offset)) {
+          return offset;
+        }
+      }
+    } else {
+      int availableSeatOffset = RandomRegistry.getRandom().nextInt(availableSeats.cardinality());
+      return getValueOfIndex(availableSeats, availableSeatOffset);
+    }
   }
 
   @VisibleForTesting
