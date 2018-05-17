@@ -1,7 +1,6 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.BitSet;
 
 import com.google.common.base.MoreObjects;
 import com.hubspot.seatsolver.model.SeatCore;
@@ -14,22 +13,28 @@ import io.jenetics.util.MSeq;
 public class EmptySeatChromosome extends AbstractSeatChromosome {
   private final ISeq<SeatCore> allSeats;
 
-  public EmptySeatChromosome(Collection<SeatCore> seats, ISeq<SeatCore> allSeats) {
-    super(buildSeq(seats, allSeats));
+  public EmptySeatChromosome(ISeq<SeatCore> allSeats,
+                             BitSet availableSeatIndices) {
+    super(buildSeq(allSeats, availableSeatIndices));
     this.allSeats = allSeats;
   }
 
-  public EmptySeatChromosome(ISeq<? extends EnumGene<SeatCore>> genes, ISeq<SeatCore> allSeats) {
+  private EmptySeatChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
+                              ISeq<SeatCore> allSeats) {
     super(genes);
     this.allSeats = allSeats;
   }
 
-  private static ISeq<? extends EnumGene<SeatCore>> buildSeq(Collection<SeatCore> seats, ISeq<SeatCore> allSeats) {
-    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(seats.size());
-    int i = 0;
-    for (SeatCore seat : seats) {
-      result.set(i, EnumGene.of(allSeats.indexOf(seat), allSeats));
-      i++;
+  private static ISeq<EnumGene<SeatCore>> buildSeq(ISeq<SeatCore> allSeats,
+                                                   BitSet availableSeatIndices) {
+    MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(availableSeatIndices.size());
+
+    int idx = 0;
+    for (int i = availableSeatIndices.nextSetBit(0); i >= 0; i = availableSeatIndices.nextSetBit(i + 1)) {
+      if (i == Integer.MAX_VALUE) {
+        break;
+      }
+      result.set(idx++, EnumGene.of(i, allSeats.get(i)));
     }
     return result.toISeq();
   }
@@ -46,7 +51,7 @@ public class EmptySeatChromosome extends AbstractSeatChromosome {
 
   @Override
   public Chromosome<EnumGene<SeatCore>> newInstance() {
-    return new EmptySeatChromosome(new ArrayList<>(), allSeats);
+    return new EmptySeatChromosome(allSeats, new BitSet(0));
   }
 
   @Override

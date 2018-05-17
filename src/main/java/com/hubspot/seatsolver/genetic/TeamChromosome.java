@@ -1,20 +1,19 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AtomicDouble;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Point;
@@ -34,40 +33,39 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private final SeatGrid seatGrid;
   private final ISeq<SeatCore> allSeats;
-  private final Set<SeatCore> allSeatsSet;
   private final TeamCore team;
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
   private AtomicDouble teamDistanceCost = new AtomicDouble(-1);
 
-  public TeamChromosome(SeatGrid seatGrid,
+  public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
+                        SeatGrid seatGrid,
                         ISeq<SeatCore> allSeats,
-                        Set<SeatCore> allSeatsSet,
-                        List<SeatCore> selectedSeats,
                         TeamCore team) {
-    super(generateSeq(allSeats, selectedSeats));
-    this.seatGrid = seatGrid;
-    this.allSeats = allSeats;
-    this.allSeatsSet = allSeatsSet;
-    this.team = team;
-  }
-
-  public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes, SeatGrid seatGrid, ISeq<SeatCore> allSeats, TeamCore team) {
     super(genes);
     this.seatGrid = seatGrid;
     this.allSeats = allSeats;
-    this.allSeatsSet = ImmutableSet.copyOf(allSeats);
+    this.team = team;
+  }
+
+  public TeamChromosome(SeatGrid grid, ISeq<SeatCore> allSeats, BitSet usedSeatIndexes, TeamCore team) {
+    super(generateSeq(allSeats, usedSeatIndexes));
+    this.seatGrid = grid;
+    this.allSeats = allSeats;
     this.team = team;
   }
 
   private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<SeatCore> allSeats,
-                                                    List<SeatCore> selectedSeats) {
+                                                      BitSet selectedSeats) {
     MSeq<EnumGene<SeatCore>> result = MSeq.ofLength(selectedSeats.size());
-    ISeq<SeatCore> allSeatsSeq = ISeq.of(allSeats);
-    for (int i = 0; i < selectedSeats.size(); ++i) {
-      SeatCore seat = selectedSeats.get(i);
-      result.set(i, EnumGene.of(allSeats.indexOf(seat), allSeatsSeq));
+
+    int idx = 0;
+    for (int i = selectedSeats.nextSetBit(0); i >= 0; i = selectedSeats.nextSetBit(i + 1)) {
+      if (i == Integer.MAX_VALUE) {
+        break;
+      }
+      result.set(idx++, EnumGene.of(i, allSeats.get(i)));
     }
     return result.toISeq();
   }
@@ -141,17 +139,13 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return c;
   }
 
-  private List<SeatCore> selectSeatBlock(ISeq<SeatCore> availableSeats) {
-    return selectSeatBlock(seatGrid, availableSeats, length());
-  }
-
   @Override
   public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatCore>> genes) {
     return new TeamChromosome(genes, seatGrid, allSeats, team);
   }
 
-  public TeamChromosome newTeamChromosome(ISeq<SeatCore> available) {
-    return new TeamChromosome(seatGrid, allSeats, allSeatsSet, selectSeatBlock(available), team);
+  public TeamChromosome newTeamChromosome(ISeq<SeatCore> availability) {
+    return new TeamChromosome(seatGrid, allSeats, selectSeatBlock(availability), team);
   }
 
   @Override
@@ -161,8 +155,18 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @Override
   public Chromosome<EnumGene<SeatCore>> newInstance() {
-    List<SeatCore> selected = selectSeatBlock(seatGrid, allSeats, allSeatsSet, length());
-    return new TeamChromosome(seatGrid, allSeats, allSeatsSet, selected, team);
+    BitSet selected = selectSeatBlock(
+        seatGrid,
+        allSeats,
+        createAvailabilityBitSet(allSeats),
+        length());
+    return new TeamChromosome(seatGrid, allSeats, selected, team);
+  }
+
+  public static BitSet createAvailabilityBitSet(ISeq<SeatCore> allSeats) {
+    BitSet availabilityBitSet = new BitSet(allSeats.size());
+    availabilityBitSet.set(0, allSeats.size());
+    return availabilityBitSet;
   }
 
   @Override
@@ -179,29 +183,43 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private static final int MAX_BLOCK_ATTEMPTS = 100;
   private static final int MAX_FILL_ATTEMPTS = 100;
 
-  public static List<SeatCore> selectSeatBlock(SeatGrid grid, ISeq<SeatCore> availableSeats, int size) {
-    return selectSeatBlock(grid, availableSeats, Sets.newHashSet(availableSeats), size);
+  private BitSet selectSeatBlock(ISeq<SeatCore> availableSeats) {
+    Set<SeatCore> seatsSet = new HashSet<>(availableSeats.size());
+    availableSeats.stream().forEach(seatsSet::add);
+    BitSet availableSeatsBitSet = new BitSet(allSeats.size());
+    for (int i = 0; i < allSeats.size(); ++i) {
+      if (seatsSet.contains(allSeats.get(i))) {
+        availableSeatsBitSet.set(i);
+      }
+    }
+    return selectSeatBlock(
+        seatGrid,
+        allSeats,
+        availableSeatsBitSet,
+        length()
+    );
   }
 
-  public static List<SeatCore> selectSeatBlock(SeatGrid grid, ISeq<SeatCore> availableSeats, Set<SeatCore> availableSeatSet, int size) {
-    List<SeatCore> selected = selectBlock(grid, availableSeats, availableSeatSet, size);
-
-    Set<SeatCore> selectedSet = new HashSet<>(selected);
-    if (selected.size() < size) {
+  public static BitSet selectSeatBlock(SeatGrid grid,
+                                       ISeq<SeatCore> seats,
+                                       BitSet availableSeats,
+                                       int size) {
+    BitSet selected = selectBlock(grid, seats, availableSeats, size);
+    BitSet usedSeats = (BitSet) availableSeats.clone();
+    if (selected.cardinality() < size) {
       LOG.debug("Could not find enough adjacent seats for team of size {}", size);
+
       // fill with random seats now, this will not be valid
       int fillAttempts = 0;
       while (selected.size() < size && fillAttempts < MAX_FILL_ATTEMPTS) {
         fillAttempts++;
 
-        int originSeatIdx = RandomRegistry.getRandom().nextInt(selected.size());
-        SeatCore randomSeatCore = availableSeats.get(originSeatIdx);
-        if (selectedSet.contains(randomSeatCore)) {
+        int availableSeatIdx = getAvailableIndex(availableSeats);
+        if (usedSeats.get(availableSeatIdx)) {
           continue;
         }
-
-        selected.add(randomSeatCore);
-        selectedSet.add(randomSeatCore);
+        SeatCore randomSeatCore = seats.get(availableSeatIdx);
+        availableSeats.clear(availableSeatIdx);
       }
 
       if (selected.size() < size) {
@@ -212,59 +230,101 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return selected;
   }
 
-  private static List<SeatCore> selectBlock(SeatGrid grid, ISeq<SeatCore> availableSeatList, Set<SeatCore> availableSeatSet, int size) {
-    Set<SeatCore> lastSelected = new HashSet<>();
+  private static int getAvailableIndex(BitSet availableSeats) {
+    int availableSeatOffset = RandomRegistry.getRandom().nextInt(availableSeats.cardinality());
+    return getValueOfIndex(availableSeats, availableSeatOffset);
+  }
+
+  @VisibleForTesting
+  static int getValueOfIndex(BitSet availableSeats, int idx) {
+    int currentIdx = -1;
+    for (int i = 0; i < idx; ++i) {
+      availableSeats.nextSetBit(currentIdx + 1);
+    }
+    return currentIdx;
+  }
+
+  private static BitSet selectBlock(SeatGrid grid,
+                                    ISeq<SeatCore> seats,
+                                    BitSet availableSeats,
+                                    int size) {
+    BitSet lastSelected = new BitSet(size);
+
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
       // pick a random starting point
-      int startSeatIdx = RandomRegistry.getRandom().nextInt(availableSeatList.size());
-      SeatCore seat = availableSeatList.get(startSeatIdx);
+      int randomSeatIndex = getAvailableIndex(availableSeats);
+      SeatCore seat = seats.get(randomSeatIndex);
 
-      Set<SeatCore> selected = Sets.newHashSet(seat);
+      BitSet selected = new BitSet(size);
+
       for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
-        if (selected.size() == size) {
+        if (selected.cardinality() == size) {
           break;
         }
 
-        Optional<SeatCore> nextSeatCore = selectAdjacent(selected, availableSeatSet, grid);
-        if (!nextSeatCore.isPresent()) {
+        OptionalInt adjacentIdx = selectAdjacent(seats, selected, availableSeats, grid);
+        if (!adjacentIdx.isPresent()) {
           break;
         }
 
-        selected.add(nextSeatCore.get());
+        selected.set(adjacentIdx.getAsInt());
       }
 
-      if (selected.size() == size) {
-        return Lists.newArrayList(selected);
+      if (selected.cardinality() == size) {
+        return selected;
       }
 
       lastSelected = selected;
     }
 
-    return Lists.newArrayList(lastSelected);
+    return lastSelected;
   }
 
-  public static Optional<SeatCore> selectAdjacent(Set<SeatCore> existing, Set<SeatCore> available, SeatGrid grid) {
-    Set<SeatCore> allAdjacent = existing.stream()
-        .flatMap(seat -> grid.getAdjacent(seat).stream())
-        .collect(Collectors.toSet());
+  private static OptionalInt selectAdjacent(ISeq<SeatCore> allSeats,
+                                            BitSet selected,
+                                            BitSet availableSeats,
+                                            SeatGrid grid) {
+    Set<SeatCore> allAdjacent = new HashSet<>();
+    List<SeatCore> existing = new ArrayList<>(selected.cardinality());
 
-    Set<SeatCore> newAdjacent = Sets.difference(allAdjacent, existing);
-
-    Set<SeatCore> availableAdjacent = Sets.intersection(newAdjacent, available);
-    if (availableAdjacent.isEmpty()) {
-      return Optional.empty();
+    for (int i = selected.nextSetBit(0); i >= 0; i = selected.nextSetBit(i + 1)) {
+      if (i == Integer.MAX_VALUE) {
+        break;
+      }
+      existing.add(allSeats.get(i));
+      allAdjacent.addAll(grid.getAdjacent(allSeats.get(i)));
     }
+
+    BitSet availableForSelection = (BitSet) availableSeats;
+    availableForSelection.andNot(selected);
+
+    BitSet adjacent = new BitSet(allSeats.size());
+
+    for (SeatCore seatCore : allAdjacent) {
+      adjacent.set(allSeats.indexOf(seatCore));
+    }
+
+    adjacent.and(availableForSelection);
+
 
     Point center = centroid(existing.iterator());
     double minDistance = Double.MAX_VALUE;
-    SeatCore nearestSeat = null;
-    for (SeatCore seat : availableAdjacent) {
-      double myDistance = PointUtils.distance(seat, center);
+    int nearestSeat = -1;
+
+    for (int i = adjacent.nextSetBit(0); i >= 0; i = adjacent.nextSetBit(i + 1)) {
+      if (i == Integer.MAX_VALUE) {
+        break;
+      }
+
+      double myDistance = PointUtils.distance(allSeats.get(i), center);
       if (myDistance < minDistance) {
-        nearestSeat = seat;
+        nearestSeat = i;
+        minDistance = myDistance;
       }
     }
-    return Optional.ofNullable(nearestSeat);
+
+    return nearestSeat < 0 ?
+        OptionalInt.empty() : OptionalInt.of(nearestSeat);
   }
 
   @Override

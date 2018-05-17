@@ -1,5 +1,6 @@
 package com.hubspot.seatsolver.genetic;
 
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -11,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.grid.SeatGrid;
@@ -50,25 +50,37 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
     // We will allow invalid solutions by simply picking an unused seat if we are boxed in
     Stopwatch stopwatch = Stopwatch.createStarted();
     LOG.debug("Starting new genotype generation");
-    Set<SeatCore> availableSeats = Sets.newHashSet(seats);
+
+    BitSet availableSeats = new BitSet(seats.size());
+    availableSeats.set(0, seats.size());
 
     List<Chromosome<EnumGene<SeatCore>>> chromosomes = teams.stream()
         .sorted(Comparator.comparing(TeamCore::numMembers).reversed())
         .map(team -> chromosomeForTeamCore(team, availableSeats))
         .collect(Collectors.toList());
 
-    chromosomes.add(new EmptySeatChromosome(availableSeats, seats));
+    chromosomes.add(new EmptySeatChromosome(seats, availableSeats));
 
     LOG.debug("Finished new genotype generation in {}ns", stopwatch.elapsed(TimeUnit.NANOSECONDS));
     return Genotype.of(chromosomes);
   }
 
-  private TeamChromosome chromosomeForTeamCore(TeamCore team, Set<SeatCore> remaining) {
-    List<SeatCore> selected = TeamChromosome.selectSeatBlock(grid, ISeq.of(remaining), remaining, team.numMembers());
-    remaining.removeAll(selected);
+  private TeamChromosome chromosomeForTeamCore(TeamCore team,
+                                               BitSet availableSeats) {
+    BitSet selected = TeamChromosome.selectSeatBlock(
+        grid,
+        seats,
+        availableSeats,
+        team.numMembers()
+    );
 
-    LOG.trace("Selected {} for team {}, remaining: {}", selected, team, remaining);
+    // Remove from available set
+    availableSeats.andNot(selected);
 
-    return new TeamChromosome(grid, seats, seatSet, selected, team);
+    return new TeamChromosome(
+        grid,
+        seats,
+        selected,
+        team);
   }
 }
