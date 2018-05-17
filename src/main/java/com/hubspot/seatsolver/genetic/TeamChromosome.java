@@ -65,7 +65,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
       if (i == Integer.MAX_VALUE) {
         break;
       }
-      result.set(idx++, EnumGene.of(i, allSeats.get(i)));
+      result.set(idx++, EnumGene.<SeatCore>of(i, allSeats.get(i)));
     }
     return result.toISeq();
   }
