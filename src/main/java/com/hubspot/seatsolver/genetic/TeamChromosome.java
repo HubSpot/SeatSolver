@@ -218,7 +218,6 @@ public class TeamChromosome extends AbstractSeatChromosome {
         if (usedSeats.get(availableSeatIdx)) {
           continue;
         }
-        SeatCore randomSeatCore = seats.get(availableSeatIdx);
         availableSeats.clear(availableSeatIdx);
       }
 
@@ -237,11 +236,14 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @VisibleForTesting
   static int getValueOfIndex(BitSet availableSeats, int idx) {
-    int currentIdx = -1;
-    for (int i = 0; i < idx; ++i) {
-      availableSeats.nextSetBit(currentIdx + 1);
+    int index = 0;
+    for (int i = availableSeats.nextSetBit(0); i >= 0; i = availableSeats.nextSetBit(i + 1)) {
+      if (i == Integer.MAX_VALUE) {
+        break;
+      }
+      index = i;
     }
-    return currentIdx;
+    return index;
   }
 
   private static BitSet selectBlock(SeatGrid grid,
