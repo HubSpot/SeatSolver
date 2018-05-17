@@ -5,6 +5,7 @@ import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,6 +34,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private final SeatGrid seatGrid;
   private final ISeq<SeatCore> allSeats;
+  private final Map<SeatCore, Integer> seatIndex;
   private final TeamCore team;
 
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
@@ -42,17 +44,24 @@ public class TeamChromosome extends AbstractSeatChromosome {
   public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
                         SeatGrid seatGrid,
                         ISeq<SeatCore> allSeats,
+                        Map<SeatCore, Integer> seatIndex,
                         TeamCore team) {
     super(genes);
     this.seatGrid = seatGrid;
+    this.seatIndex = seatIndex;
     this.allSeats = allSeats;
     this.team = team;
   }
 
-  public TeamChromosome(SeatGrid grid, ISeq<SeatCore> allSeats, BitSet usedSeatIndexes, TeamCore team) {
+  public TeamChromosome(SeatGrid grid,
+                        ISeq<SeatCore> allSeats,
+                        Map<SeatCore, Integer> seatIndex,
+                        BitSet usedSeatIndexes,
+                        TeamCore team) {
     super(generateSeq(allSeats, usedSeatIndexes));
     this.seatGrid = grid;
     this.allSeats = allSeats;
+    this.seatIndex = seatIndex;
     this.team = team;
   }
 
@@ -142,11 +151,11 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @Override
   public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatCore>> genes) {
-    return new TeamChromosome(genes, seatGrid, allSeats, team);
+    return new TeamChromosome(genes, seatGrid, allSeats, seatIndex, team);
   }
 
   public TeamChromosome newTeamChromosome(ISeq<SeatCore> availability) {
-    return new TeamChromosome(seatGrid, allSeats, selectSeatBlock(availability), team);
+    return new TeamChromosome(seatGrid, allSeats, seatIndex, selectSeatBlock(availability), team);
   }
 
   @Override
@@ -159,9 +168,10 @@ public class TeamChromosome extends AbstractSeatChromosome {
     BitSet selected = selectSeatBlock(
         seatGrid,
         allSeats,
+        seatIndex,
         createAvailabilityBitSet(allSeats),
         length());
-    return new TeamChromosome(seatGrid, allSeats, selected, team);
+    return new TeamChromosome(seatGrid, allSeats, seatIndex, selected, team);
   }
 
   public static BitSet createAvailabilityBitSet(ISeq<SeatCore> allSeats) {
@@ -196,6 +206,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return selectSeatBlock(
         seatGrid,
         allSeats,
+        seatIndex,
         availableSeatsBitSet,
         length()
     );
@@ -203,9 +214,10 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   public static BitSet selectSeatBlock(SeatGrid grid,
                                        ISeq<SeatCore> seats,
+                                       Map<SeatCore, Integer> seatIndex,
                                        BitSet availableSeats,
                                        int size) {
-    BitSet selected = selectBlock(grid, seats, availableSeats, size);
+    BitSet selected = selectBlock(grid, seats, seatIndex, availableSeats, size);
     BitSet usedSeats = (BitSet) availableSeats.clone();
     if (selected.cardinality() < size) {
       LOG.debug("Could not find enough adjacent seats for team of size {}", size);
@@ -249,6 +261,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private static BitSet selectBlock(SeatGrid grid,
                                     ISeq<SeatCore> seats,
+                                    Map<SeatCore, Integer> seatIndex,
                                     BitSet availableSeats,
                                     int size) {
     BitSet lastSelected = new BitSet(seats.size());
@@ -265,7 +278,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
           break;
         }
 
-        OptionalInt adjacentIdx = selectAdjacent(seats, selected, availableSeats, grid);
+        OptionalInt adjacentIdx = selectAdjacent(seats, seatIndex, selected, availableSeats, grid);
         if (!adjacentIdx.isPresent()) {
           break;
         }
@@ -284,6 +297,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   }
 
   private static OptionalInt selectAdjacent(ISeq<SeatCore> allSeats,
+                                            Map<SeatCore, Integer> seatIndex,
                                             BitSet selected,
                                             BitSet availableSeats,
                                             SeatGrid grid) {
@@ -304,7 +318,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
     BitSet adjacent = new BitSet(allSeats.size());
 
     for (SeatCore seatCore : allAdjacent) {
-      adjacent.set(allSeats.indexOf(seatCore));
+      adjacent.set(seatIndex.get(seatCore));
     }
 
     adjacent.and(availableForSelection);

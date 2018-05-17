@@ -2,8 +2,9 @@ package com.hubspot.seatsolver.genetic;
 
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -11,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.hubspot.seatsolver.grid.SeatGrid;
@@ -29,7 +29,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
   private static final Logger LOG = LoggerFactory.getLogger(SeatGenotypeFactory.class);
 
   private final ISeq<SeatCore> seats;
-  private final Set<SeatCore> seatSet;
+  private final Map<SeatCore, Integer> seatIndex;
   private final List<TeamCore> teams;
   private final SeatGrid grid;
 
@@ -38,7 +38,10 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
                              List<TeamCore> teams,
                              SeatGrid grid) {
     this.seats = seats;
-    this.seatSet = ImmutableSet.copyOf(seats);
+    this.seatIndex = new IdentityHashMap<>(seats.size());
+    for (int i = 0; i < seats.size(); ++i) {
+      seatIndex.put(seats.get(i), i);
+    }
     this.teams = teams;
     this.grid = grid;
   }
@@ -70,6 +73,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
     BitSet selected = TeamChromosome.selectSeatBlock(
         grid,
         seats,
+        seatIndex,
         availableSeats,
         team.numMembers()
     );
@@ -80,6 +84,7 @@ public class SeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>
     return new TeamChromosome(
         grid,
         seats,
+        seatIndex,
         selected,
         team);
   }
