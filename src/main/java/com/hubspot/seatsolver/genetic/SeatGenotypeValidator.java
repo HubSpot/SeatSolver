@@ -1,6 +1,5 @@
 package com.hubspot.seatsolver.genetic;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +29,13 @@ public class SeatGenotypeValidator {
 
   public boolean validateGenotype(Genotype<EnumGene<SeatCore>> genotype) {
     LOG.trace("Validating genotype: {}", genotype);
+    for (Chromosome<EnumGene<SeatCore>> chromosome : genotype) {
+      if (chromosome instanceof TeamChromosome) {
+        if (!((TeamChromosome) chromosome).hasTheRightNumberOfSeats()) {
+          return false;
+        }
+      }
+    }
 
     HashObjSet<String> chosen = HashObjSets.getDefaultFactory().newMutableSet();
     HashObjSet<String> empty = HashObjSets.getDefaultFactory().newMutableSet();

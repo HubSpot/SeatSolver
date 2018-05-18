@@ -58,11 +58,13 @@ public class TeamChromosome extends AbstractSeatChromosome {
                         Map<SeatCore, Integer> seatIndex,
                         BitSet usedSeatIndexes,
                         TeamCore team) {
-    super(generateSeq(allSeats, usedSeatIndexes));
-    this.seatGrid = grid;
-    this.allSeats = allSeats;
-    this.seatIndex = seatIndex;
-    this.team = team;
+    this(
+        generateSeq(allSeats, usedSeatIndexes),
+        grid,
+        allSeats,
+        seatIndex,
+        team
+    );
   }
 
   public SeatCore getSeat(int i) {
@@ -78,6 +80,11 @@ public class TeamChromosome extends AbstractSeatChromosome {
     }
     return false;
   }
+
+  public boolean hasTheRightNumberOfSeats() {
+    return length() == team.numMembers();
+  }
+
 
   private static ISeq<EnumGene<SeatCore>> generateSeq(ISeq<SeatCore> allSeats,
                                                       BitSet selectedSeats) {
@@ -206,7 +213,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   private static final int MAX_SEAT_ATTEMPTS = 100;
   private static final int MAX_BLOCK_ATTEMPTS = 100;
-  private static final int MAX_FILL_ATTEMPTS = 100;
+  private static final int MAX_FILL_ATTEMPTS = 250;
 
   private BitSet selectSeatBlock(ISeq<SeatCore> availableSeats) {
     Set<SeatCore> seatsSet = new HashSet<>(availableSeats.size());
@@ -238,7 +245,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
       // fill with random seats now, this will not be valid
       int fillAttempts = 0;
-      while (selected.size() < size && fillAttempts < MAX_FILL_ATTEMPTS) {
+      while (selected.cardinality() < size && fillAttempts < MAX_FILL_ATTEMPTS) {
         fillAttempts++;
 
         int availableSeatIdx = getAvailableIndex(availableSeats);
@@ -248,7 +255,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
         availableSeats.clear(availableSeatIdx);
       }
 
-      if (selected.size() < size) {
+      if (selected.cardinality() < size) {
         LOG.debug("Failed to create full seat block for {} seats", size);
       }
     }
@@ -302,7 +309,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
       for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
         if (selected.cardinality() == size) {
-          break;
+          return selected;
         }
 
         OptionalInt adjacentIdx = selectAdjacent(seats, seatIndex, selected, availableSeats, grid);
