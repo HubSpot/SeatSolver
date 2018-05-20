@@ -82,9 +82,16 @@ public class NearSeatMutator extends Mutator<EnumGene<SeatCore>, Double> {
         ).collect(ISeq.toISeq());
 
         MSeq<Chromosome<EnumGene<SeatCore>>> newGenotype = genotype.toSeq().copy();
-        newGenotype.set(chromosomeIdx, chromosome.newInstance(team1Gene));
-        newGenotype.set(otherChromosomeIdx, otherChromosome.newInstance(team2Gene));
-        return MutatorResult.of(phenotype.newInstance(Genotype.of(newGenotype)));
+        TeamChromosome newTeam1 = (TeamChromosome) chromosome.newInstance(team1Gene);
+        TeamChromosome newTeam2 = (TeamChromosome) chromosome.newInstance(team2Gene);
+        if (newTeam1.squarenessScore() <= ((TeamChromosome) chromosome).squarenessScore() &&
+            newTeam2.squarenessScore() <= ((TeamChromosome) otherChromosome).squarenessScore()) {
+          newGenotype.set(chromosomeIdx, chromosome.newInstance(team1Gene));
+          newGenotype.set(otherChromosomeIdx, otherChromosome.newInstance(team2Gene));
+          return MutatorResult.of(phenotype.newInstance(Genotype.of(newGenotype)));
+        } else {
+          return MutatorResult.of(phenotype);
+        }
       }
     }
 

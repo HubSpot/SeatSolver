@@ -10,12 +10,14 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AtomicDouble;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.Point;
@@ -45,6 +47,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
   private AtomicDouble teamDistanceCost = new AtomicDouble(-1);
   private AtomicDouble pinnedDistanceCost = new AtomicDouble(-1);
+  private AtomicDouble squarenessScore = new AtomicDouble(-1);
 
   public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
                         BitSet usedSeatIndexes,
@@ -91,6 +94,31 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   public boolean hasTheRightNumberOfSeats() {
     return length() == team.numMembers();
+  }
+
+  public double squarenessScore() {
+    if (length() <= 1) {
+      return 1;
+    }
+    if (this.squarenessScore.get() >= 0) {
+      return this.squarenessScore.get();
+    }
+
+    double nPairs = 0;
+    double nAdjacent = 0;
+
+    Set<SeatCore> seats = stream().map(EnumGene::getAllele).collect(Collectors.toSet());
+    Set<SeatCore> remaining = new HashSet<>(seats);
+    for (SeatCore seat : seats) {
+      remaining.remove(seat);
+
+      nPairs += seats.size();
+      nAdjacent += Sets.intersection(seatGrid.getAdjacent(seat), remaining).size();
+    }
+
+    double result = nPairs / nAdjacent;
+    this.squarenessScore.set(result);
+    return result;
   }
 
 

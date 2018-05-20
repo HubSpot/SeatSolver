@@ -7,7 +7,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -18,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
@@ -35,7 +33,6 @@ import com.hubspot.seatsolver.utils.GenotypeWriter;
 import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Alterer;
-import io.jenetics.Chromosome;
 import io.jenetics.EnumGene;
 import io.jenetics.Genotype;
 import io.jenetics.Phenotype;
@@ -212,7 +209,7 @@ public class SeatSolver {
           TeamChromosome chromosome = ((TeamChromosome) genes);
           intraTeamStats.accept(chromosome.calculateTeamDistanceCost());
           pinnedTeamStats.accept(chromosome.calculatePinnedDistanceCost());
-          squarenessStats.accept(squarenessScore(genes));
+          squarenessStats.accept(chromosome.squarenessScore());
           adjacencyDists(chromosome, chromosomeByTeamCore).forEach(adjacencyStats);
         });
 
@@ -260,25 +257,6 @@ public class SeatSolver {
       }
     }
     return sawNoTeam;
-  }
-
-  private double squarenessScore(Chromosome<EnumGene<SeatCore>> genes) {
-    if (genes.length() <= 1) {
-      return 1;
-    }
-
-    double nPairs = 0;
-    double nAdjacent = 0;
-    Set<SeatCore> seats = genes.toSeq().stream().map(EnumGene::getAllele).collect(Collectors.toSet());
-    Set<SeatCore> remaining = Sets.newHashSet(seats);
-    for (SeatCore seat : seats) {
-      remaining.remove(seat);
-
-      nPairs += seats.size();
-      nAdjacent += Sets.intersection(grid.getAdjacent(seat), remaining).size();
-    }
-
-    return nPairs / nAdjacent;
   }
 
   private PopulationResult buildPopulationResult(EvolutionResult<EnumGene<SeatCore>, Double> result) {
