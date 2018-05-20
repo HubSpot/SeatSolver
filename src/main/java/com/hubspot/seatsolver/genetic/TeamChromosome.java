@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -21,6 +22,7 @@ import com.hubspot.seatsolver.model.Point;
 import com.hubspot.seatsolver.model.PointBase;
 import com.hubspot.seatsolver.model.SeatCore;
 import com.hubspot.seatsolver.model.TeamCore;
+import com.hubspot.seatsolver.utils.Pair;
 import com.hubspot.seatsolver.utils.PointUtils;
 
 import io.jenetics.Chromosome;
@@ -36,18 +38,22 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private final ISeq<SeatCore> allSeats;
   private final Map<SeatCore, Integer> seatIndex;
   private final TeamCore team;
+  private final BitSet usedSeatIndexes;
 
+  private AtomicReference<Pair<SeatCore, Integer>> furthestSeat = new AtomicReference<>();
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
   private AtomicDouble teamDistanceCost = new AtomicDouble(-1);
   private AtomicDouble pinnedDistanceCost = new AtomicDouble(-1);
 
   public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
+                        BitSet usedSeatIndexes,
                         SeatGrid seatGrid,
                         ISeq<SeatCore> allSeats,
                         Map<SeatCore, Integer> seatIndex,
                         TeamCore team) {
     super(genes);
+    this.usedSeatIndexes = usedSeatIndexes;
     this.seatGrid = seatGrid;
     this.seatIndex = seatIndex;
     this.allSeats = allSeats;
@@ -61,6 +67,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
                         TeamCore team) {
     this(
         generateSeq(allSeats, usedSeatIndexes),
+        usedSeatIndexes,
         grid,
         allSeats,
         seatIndex,
@@ -192,7 +199,11 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
   @Override
   public AbstractSeatChromosome newSeatChromosome(ISeq<EnumGene<SeatCore>> genes) {
-    return new TeamChromosome(genes, seatGrid, allSeats, seatIndex, team);
+    BitSet usedSeatIndexes = new BitSet(this.usedSeatIndexes.size());
+    for (EnumGene<SeatCore> gene : genes) {
+      usedSeatIndexes.set(seatIndex.get(gene.getAllele()));
+    }
+    return new TeamChromosome(genes, usedSeatIndexes, seatGrid, allSeats, seatIndex, team);
   }
 
   public TeamChromosome newTeamChromosome(ISeq<SeatCore> availability) {
@@ -251,6 +262,57 @@ public class TeamChromosome extends AbstractSeatChromosome {
         availableSeatsBitSet,
         length()
     );
+  }
+
+  public boolean hasSeatIndex(int seatIndex) {
+    return usedSeatIndexes.get(seatIndex);
+  }
+
+  public Pair<SeatCore, Integer> getFurthestSeat() {
+    if (length() == 1) {
+      SeatCore seat = getSeat(0);
+      return Pair.of(seat, seatIndex.get(seat));
+    }
+    if (furthestSeat.get() != null) {
+      return furthestSeat.get();
+    }
+    double maxDistance = 0;
+    SeatCore worstSeat = null;
+    for (int i = 0; i < length(); ++i) {
+      double currentDistance = 0;
+      SeatCore needleSeat = getSeat(i);
+      for (int j = 0; j < length(); ++j) {
+        if (i != j) {
+          currentDistance += PointUtils.distance(needleSeat, getSeat(j));
+        }
+      }
+      if (currentDistance > maxDistance) {
+        maxDistance = currentDistance;
+        worstSeat = needleSeat;
+      }
+    }
+    Pair<SeatCore, Integer> result = Pair.of(
+        worstSeat, seatIndex.get(worstSeat)
+    );
+    furthestSeat.set(result);
+    return result;
+  }
+
+  public Optional<Pair<SeatCore, Integer>> findAdjacentSeat() {
+    BitSet allAvailable = new BitSet(usedSeatIndexes.size());
+    allAvailable.set(0, allAvailable.size());
+    OptionalInt maybeIdx = selectAdjacent(
+        allSeats,
+        seatIndex,
+        usedSeatIndexes,
+        allAvailable,
+        seatGrid
+    );
+    if (maybeIdx.isPresent()) {
+      return Optional.of(Pair.of(allSeats.get(maybeIdx.getAsInt()), maybeIdx.getAsInt());
+    } else {
+      return Optional.empty();
+    }
   }
 
   public static BitSet selectSeatBlock(SeatGrid grid,
