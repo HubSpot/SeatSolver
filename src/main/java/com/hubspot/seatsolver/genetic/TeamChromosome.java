@@ -40,6 +40,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
   private AtomicReference<Point> centroid = new AtomicReference<>(null);
   private AtomicDouble meanWeightedSeatDist = new AtomicDouble(-1);
   private AtomicDouble teamDistanceCost = new AtomicDouble(-1);
+  private AtomicDouble pinnedDistanceCost = new AtomicDouble(-1);
 
   public TeamChromosome(ISeq<? extends EnumGene<SeatCore>> genes,
                         SeatGrid seatGrid,
@@ -109,6 +110,25 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return seatGrid;
   }
 
+  public double calculatePinnedDistanceCost() {
+    Double dist = pinnedDistanceCost.get();
+    if (dist >= 0) {
+      return dist;
+    }
+    if (team.wantsSeatProximity().isPresent()) {
+      double maxDistance = 0;
+      for (EnumGene<SeatCore> seatedSeat : this) {
+        maxDistance = Math.max(maxDistance,
+            PointUtils.distance(seatedSeat.getAllele(), team.wantsSeatProximity().get()));
+      }
+      double cost = Math.pow(maxDistance, 1.5) * 10;
+      pinnedDistanceCost.set(cost);
+      return cost;
+    } else {
+      pinnedDistanceCost.set(0);
+      return 0;
+    }
+  }
 
   public double calculateTeamDistanceCost() {
     Double dist = teamDistanceCost.get();

@@ -202,6 +202,7 @@ public class SeatSolver {
         .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
 
     DoubleStatistics intraTeamStats = new DoubleStatistics();
+    DoubleStatistics pinnedTeamStats = new DoubleStatistics();
     DoubleStatistics squarenessStats = new DoubleStatistics();
     DoubleStatistics adjacencyStats = new DoubleStatistics();
 
@@ -210,6 +211,7 @@ public class SeatSolver {
         .forEach(genes -> {
           TeamChromosome chromosome = ((TeamChromosome) genes);
           intraTeamStats.accept(chromosome.calculateTeamDistanceCost());
+          pinnedTeamStats.accept(chromosome.calculatePinnedDistanceCost());
           squarenessStats.accept(squarenessScore(genes));
           adjacencyDists(chromosome, chromosomeByTeamCore).forEach(adjacencyStats);
         });
@@ -222,9 +224,10 @@ public class SeatSolver {
     }
     double adjacencyScaled = adjacencyStats.getSum() * adjacencyStats.getStandardDeviation();
     double squarenessScaled = squarenessStats.getSum() * squarenessStats.getStandardDeviation();
+    double pinnedScale = pinnedTeamStats.getSum();
     return config.seatSolverParams().intraTeamScoreWeight() * intraTeamScaled +
-        config.seatSolverParams().interTeamScoreWeight() * adjacencyScaled +
-        config.seatSolverParams().intraTeamSquarenessWeight() * squarenessScaled;
+        config.seatSolverParams().interTeamScoreWeight() * (adjacencyScaled + pinnedScale) +
+        config.seatSolverParams().intraTeamSquarenessWeight() * (squarenessScaled + pinnedScale);
   }
 
   private DoubleStream adjacencyDists(TeamChromosome chromosome,
