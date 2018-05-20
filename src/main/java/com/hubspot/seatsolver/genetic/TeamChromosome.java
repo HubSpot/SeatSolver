@@ -309,7 +309,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
         seatGrid
     );
     if (maybeIdx.isPresent()) {
-      return Optional.of(Pair.of(allSeats.get(maybeIdx.getAsInt()), maybeIdx.getAsInt());
+      return Optional.of(Pair.of(allSeats.get(maybeIdx.getAsInt()), maybeIdx.getAsInt()));
     } else {
       return Optional.empty();
     }
