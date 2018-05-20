@@ -3,6 +3,7 @@ package com.hubspot.seatsolver.genetic.alter;
 import java.util.Optional;
 import java.util.Random;
 
+import com.google.common.collect.Streams;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
 import com.hubspot.seatsolver.model.SeatCore;
 import com.hubspot.seatsolver.utils.Pair;
@@ -14,6 +15,7 @@ import io.jenetics.Mutator;
 import io.jenetics.MutatorResult;
 import io.jenetics.Phenotype;
 import io.jenetics.internal.math.probability;
+import io.jenetics.util.ISeq;
 import io.jenetics.util.MSeq;
 
 public class NearSeatMutator extends Mutator<EnumGene<SeatCore>, Double> {
@@ -65,24 +67,23 @@ public class NearSeatMutator extends Mutator<EnumGene<SeatCore>, Double> {
           continue;
         }
 
-        MSeq<EnumGene<SeatCore>> team1Gene = chromosome.stream()
-            .filter(gene -> !gene.getAllele().equals(thisTeamSeat.first()))
-            .collect(MSeq.toMSeq());
-        otherChromosome.stream()
-            .filter(otherGene -> otherGene.getAllele().equals(otherTeamSeat.get().first()))
-            .forEach(team1Gene::append);
+        ISeq<EnumGene<SeatCore>> team1Gene = Streams.concat(
+            chromosome.stream()
+                .filter(gene -> !gene.getAllele().equals(thisTeamSeat.first())),
+            otherChromosome.stream()
+                .filter(otherGene -> otherGene.getAllele().equals(otherTeamSeat.get().first()))
+        ).collect(ISeq.toISeq());
 
-
-        MSeq<EnumGene<SeatCore>> team2Gene = otherChromosome.stream()
-            .filter(gene -> !gene.getAllele().equals(otherTeamSeat.get().first()))
-            .collect(MSeq.toMSeq());
-        chromosome.stream()
-            .filter(thisGene -> thisGene.getAllele().equals(thisTeamSeat.first()))
-            .forEach(team2Gene::append);
+        ISeq<EnumGene<SeatCore>> team2Gene = Streams.concat(
+            otherChromosome.stream()
+                .filter(gene -> !gene.getAllele().equals(otherTeamSeat.get().first())),
+            chromosome.stream()
+                .filter(thisGene -> thisGene.getAllele().equals(thisTeamSeat.first()))
+        ).collect(ISeq.toISeq());
 
         MSeq<Chromosome<EnumGene<SeatCore>>> newGenotype = genotype.toSeq().copy();
-        newGenotype.set(chromosomeIdx, chromosome.newInstance(team1Gene.toISeq()));
-        newGenotype.set(otherChromosomeIdx, otherChromosome.newInstance(team2Gene.toISeq()));
+        newGenotype.set(chromosomeIdx, chromosome.newInstance(team1Gene));
+        newGenotype.set(otherChromosomeIdx, otherChromosome.newInstance(team2Gene));
         return MutatorResult.of(phenotype.newInstance(Genotype.of(newGenotype)));
       }
     }
