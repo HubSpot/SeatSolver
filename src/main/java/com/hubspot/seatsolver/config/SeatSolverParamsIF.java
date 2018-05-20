@@ -14,6 +14,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 @JsonDeserialize(as = SeatSolverParams.class)
 public interface SeatSolverParamsIF {
   @Value.Default
+  default double nearSeatSwapProbability() {
+    return 0.05;
+  }
+
+  @Value.Default
   default double intraTeamScoreWeight() {
     return 100.;
   }
