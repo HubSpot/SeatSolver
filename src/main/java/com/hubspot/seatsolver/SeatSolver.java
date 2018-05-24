@@ -85,7 +85,7 @@ public class SeatSolver {
         config.alterers().subList(1, config.alterers().size()).toArray(new Alterer[]{}) :
         new Alterer[]{};
 
-    Engine<EnumGene<SeatCore>, Double> engine = Engine.builder(this::fitness, this.genotypeFactory)
+    Engine<EnumGene<SeatCore>, Double> engine = Engine.builder(this::timedFitness, this.genotypeFactory)
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
@@ -187,8 +187,14 @@ public class SeatSolver {
     }
   }
 
-  private double fitness(Genotype<EnumGene<SeatCore>> genotype) {
+  private double timedFitness(Genotype<EnumGene<SeatCore>> genotype) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    double fitness = fitness(genotype);
+    LOG.debug("Scored genotype in {}ns", stopwatch.elapsed(TimeUnit.NANOSECONDS));
+    return fitness;
+  }
 
+  private double fitness(Genotype<EnumGene<SeatCore>> genotype) {
     Map<String, TeamChromosome> chromosomeByTeamCore = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
