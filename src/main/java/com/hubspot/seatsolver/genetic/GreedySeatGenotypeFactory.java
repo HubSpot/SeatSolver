@@ -154,6 +154,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
           .map(Adjacency::id)
           .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().getOrDefault(teamId, 1.)))
           .filter(teamId -> !placedTeamIds.contains(teamId))
+          .filter(teamsById::containsKey)
           .limit(4)
           .map(teamId -> chromosomeForTeamCore(selected, teamsById.get(teamId), availableSeats))
           .filter(Optional::isPresent)
