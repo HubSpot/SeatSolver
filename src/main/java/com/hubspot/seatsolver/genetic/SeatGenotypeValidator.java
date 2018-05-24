@@ -2,11 +2,13 @@ package com.hubspot.seatsolver.genetic;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.SeatCore;
@@ -28,6 +30,8 @@ public class SeatGenotypeValidator {
   }
 
   public boolean validateGenotype(Genotype<EnumGene<SeatCore>> genotype) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+
     LOG.trace("Validating genotype: {}", genotype);
     for (Chromosome<EnumGene<SeatCore>> chromosome : genotype) {
       if (chromosome instanceof TeamChromosome) {
@@ -80,6 +84,7 @@ public class SeatGenotypeValidator {
 
     LOG.trace("Found valid genotype: {}", genotype);
 
+    LOG.debug("Validated genotype in {}ns", stopwatch.elapsed(TimeUnit.NANOSECONDS));
     return true;
   }
 
