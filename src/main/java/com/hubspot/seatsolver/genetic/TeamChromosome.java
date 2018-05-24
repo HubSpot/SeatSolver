@@ -412,7 +412,6 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
       // pick a random starting point with a low connection count
-      
       int randomSeatIndex = getAvailableIndex(availableSeats);
 
       BitSet selected = selectBlock(randomSeatIndex, grid, seats, seatIndex, availableSeats, size);
@@ -515,9 +514,9 @@ public class TeamChromosome extends AbstractSeatChromosome {
 
     while (points.hasNext()) {
       PointBase point = points.next();
-        sumX += point.x();
-        sumY += point.y();
-        ++count;
+      sumX += point.x();
+      sumY += point.y();
+      ++count;
     }
 
     double x = sumX / count;
