@@ -242,25 +242,6 @@ public class SeatSolver {
         .filter(d -> d > 0);
   }
 
-  private boolean hasAnyAdjacentTeam(TeamChromosome chromosome,
-                                     Map<String, TeamChromosome> chromosomeByTeamCore) {
-    SeatCore firstSeat = chromosome.getSeat(0);
-    boolean sawNoTeam = true;
-    for (Map.Entry<String, Double> wantsAdjacent : chromosome.getTeam().effectiveWeightsByTeamId().entrySet()) {
-      if (wantsAdjacent.getValue() < 0.01) {
-        continue;
-      }
-      TeamChromosome otherTeam = chromosomeByTeamCore.get(wantsAdjacent.getKey());
-      if (otherTeam == null || otherTeam.length() <= 1) {
-        continue;
-      }
-      if (otherTeam.hasAnyAdjacent(firstSeat)) {
-        return true;
-      }
-    }
-    return sawNoTeam;
-  }
-
   private PopulationResult buildPopulationResult(EvolutionResult<EnumGene<SeatCore>, Double> result) {
     List<AssignmentResult> top10Results = result.getPopulation().stream()
         .sorted(Comparator.<Phenotype<? ,Double>, Double>comparing(Phenotype::getFitness).reversed())

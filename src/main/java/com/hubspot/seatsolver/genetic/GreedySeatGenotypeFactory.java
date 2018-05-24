@@ -36,6 +36,7 @@ import io.jenetics.util.ISeq;
 @Singleton
 public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<SeatCore>>> {
   private static final Logger LOG = LoggerFactory.getLogger(GreedySeatGenotypeFactory.class);
+  private static final int MAX_TEAM_TRIES = 10;
 
   private final ISeq<SeatCore> seats;
   private final Map<SeatCore, Integer> seatIndex;
@@ -124,42 +125,47 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
   private List<TeamChromosome> assignStartingTeam(TeamCore startingTeam,
                                                   BitSet availableSeats,
                                                   Set<String> placedTeamIds) {
-    SeatCore startingSeat = seatsByAdjacencyCount.stream()
-        .filter(seatCore -> availableSeats.get(seatIndex.get(seatCore)))
-        .findFirst()
-        .orElseThrow(() -> new IllegalStateException("No seats available. This should not be possible"));
+    for (int i = 0; i < MAX_TEAM_TRIES; i++) {
+      SeatCore startingSeat = seatsByAdjacencyCount.stream()
+          .filter(seatCore -> availableSeats.get(seatIndex.get(seatCore)))
+          .limit(10)
+          .sorted(Comparator.comparing(ignored -> ThreadLocalRandom.current().nextBoolean()))
+          .findFirst()
+          .orElseThrow(() -> new IllegalStateException("No seats available. This should not be possible"));
 
-    int startIdx = seatIndex.get(startingSeat);
+      int startIdx = seatIndex.get(startingSeat);
 
-    // TODO: retry if cardinality does not match
-    BitSet selected = TeamChromosome.selectBlock(startIdx, grid, seats, seatIndex, availableSeats, startingTeam.numMembers());
-    if (selected.cardinality() != startingTeam.numMembers()) {
-      return Collections.emptyList();
+      BitSet selected = TeamChromosome.selectBlock(startIdx, grid, seats, seatIndex, availableSeats, startingTeam.numMembers());
+      if (selected.cardinality() != startingTeam.numMembers()) {
+        continue;
+      }
+
+      // Remove from available set
+      availableSeats.andNot(selected);
+
+      TeamChromosome startChromosome = new TeamChromosome(
+          grid,
+          seats,
+          seatIndex,
+          selected,
+          startingTeam);
+
+      List<TeamChromosome> adjacentChromosomes = startingTeam.wantsAdjacent().stream()
+          .map(Adjacency::id)
+          .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().get(teamId)))
+          .filter(teamId -> !placedTeamIds.contains(teamId))
+          .limit(4)
+          .map(teamId -> chromosomeForTeamCore(selected, teamsById.get(teamId), availableSeats))
+          .filter(Optional::isPresent)
+          .map(Optional::get)
+          .collect(Collectors.toList());
+
+      adjacentChromosomes.add(startChromosome);
+
+      return adjacentChromosomes;
     }
 
-    // Remove from available set
-    availableSeats.andNot(selected);
-
-    TeamChromosome startChromosome = new TeamChromosome(
-        grid,
-        seats,
-        seatIndex,
-        selected,
-        startingTeam);
-
-    List<TeamChromosome> adjacentChromosomes = startingTeam.wantsAdjacent().stream()
-        .map(Adjacency::id)
-        .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().get(teamId)))
-        .filter(teamId -> !placedTeamIds.contains(teamId))
-        .limit(4)
-        .map(teamId -> chromosomeForTeamCore(selected, teamsById.get(teamId), availableSeats))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
-
-    adjacentChromosomes.add(startChromosome);
-
-    return adjacentChromosomes;
+    return Collections.emptyList();
   }
 
   private Optional<TeamChromosome> chromosomeForTeamCore(BitSet adjacentTo,
