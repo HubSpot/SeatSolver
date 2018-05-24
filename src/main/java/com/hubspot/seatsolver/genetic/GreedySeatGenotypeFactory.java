@@ -116,35 +116,16 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     // now place any remaining teams in random order
     for (TeamCore team : teams) {
       if (!placedTeamIds.contains(team.id())) {
-        BitSet selected = new BitSet();
-        for (int i = 0; i < MAX_TEAM_TRIES; i++) {
-          selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
-          if (selected.cardinality() != team.numMembers()) {
-            continue;
-          }
+        BitSet selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
+        availableSeats.andNot(selected);
 
-          availableSeats.andNot(selected);
-
-          finalChromosomes.add(new TeamChromosome(
-              grid,
-              seats,
-              seatIndex,
-              selected,
-              team));
-          break;
-        }
-
-        if (selected.cardinality() != team.numMembers()) {
-          // Add it anyhow
-          availableSeats.andNot(selected);
-
-          finalChromosomes.add(new TeamChromosome(
-              grid,
-              seats,
-              seatIndex,
-              selected,
-              team));
-        }
+        finalChromosomes.add(new TeamChromosome(
+            grid,
+            seats,
+            seatIndex,
+            selected,
+            team));
+        break;
       }
     }
 
