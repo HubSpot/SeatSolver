@@ -77,7 +77,8 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     availableSeats.set(0, seats.size());
 
     List<Chromosome<EnumGene<SeatCore>>> chromosomes = assignTeams(availableSeats);
-    chromosomes.add(new EmptySeatChromosome(seats, availableSeats));
+
+    EmptySeatChromosome.create(seats, availableSeats).ifPresent(chromosomes::add);
 
     LOG.debug("Finished new genotype generation in {}ns", stopwatch.elapsed(TimeUnit.NANOSECONDS));
     return Genotype.of(chromosomes);
@@ -87,7 +88,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     // TODO: make this number configurable
     List<TeamCore> startingTeams = teams.stream()
         .sorted(Comparator.comparing(TeamCore::numMembers).reversed())
-        .limit(30)
+        .limit(10)
         .sorted(Comparator.comparing(ignored -> ThreadLocalRandom.current().nextBoolean()))
         .collect(Collectors.toList());
 
@@ -106,16 +107,22 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     // now place any remaining teams in random order
     for (TeamCore team : teams) {
       if (!placedTeamIds.contains(team.id())) {
-        BitSet selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
+        for (int i = 0; i < MAX_TEAM_TRIES; i++) {
+          BitSet selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
+          if (selected.cardinality() != team.numMembers()) {
+            continue;
+          }
 
-        availableSeats.andNot(selected);
+          availableSeats.andNot(selected);
 
-        finalChromosomes.add(new TeamChromosome(
-            grid,
-            seats,
-            seatIndex,
-            selected,
-            team));
+          finalChromosomes.add(new TeamChromosome(
+              grid,
+              seats,
+              seatIndex,
+              selected,
+              team));
+          break;
+        }
       }
     }
 
@@ -155,7 +162,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
           .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().getOrDefault(teamId, 1.)))
           .filter(teamId -> !placedTeamIds.contains(teamId))
           .filter(teamsById::containsKey)
-          .limit(4)
+          .limit(2)
           .map(teamId -> chromosomeForTeamCore(selected, teamsById.get(teamId), availableSeats))
           .filter(Optional::isPresent)
           .map(Optional::get)

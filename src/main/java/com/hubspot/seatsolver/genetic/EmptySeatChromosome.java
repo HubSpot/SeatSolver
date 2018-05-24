@@ -1,6 +1,7 @@
 package com.hubspot.seatsolver.genetic;
 
 import java.util.BitSet;
+import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
 import com.hubspot.seatsolver.model.SeatCore;
@@ -23,6 +24,16 @@ public class EmptySeatChromosome extends AbstractSeatChromosome {
                               ISeq<SeatCore> allSeats) {
     super(genes);
     this.allSeats = allSeats;
+  }
+
+  public static Optional<EmptySeatChromosome> create(ISeq<SeatCore> allSeats,
+                                BitSet availableSeatIndices) {
+    ISeq<EnumGene<SeatCore>> genes = buildSeq(allSeats, availableSeatIndices);
+    if (genes.size() == 0) {
+      return Optional.empty();
+    }
+
+    return Optional.of(new EmptySeatChromosome(genes, allSeats));
   }
 
   private static ISeq<EnumGene<SeatCore>> buildSeq(ISeq<SeatCore> allSeats,
