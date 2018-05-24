@@ -20,10 +20,9 @@ import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.hubspot.seatsolver.config.SeatSolverConfig;
 import com.hubspot.seatsolver.genetic.EmptySeatChromosome;
-import com.hubspot.seatsolver.genetic.SeatGenotypeFactory;
+import com.hubspot.seatsolver.genetic.GreedySeatGenotypeFactory;
 import com.hubspot.seatsolver.genetic.SeatGenotypeValidator;
 import com.hubspot.seatsolver.genetic.TeamChromosome;
-import com.hubspot.seatsolver.grid.SeatGrid;
 import com.hubspot.seatsolver.model.AssignmentResult;
 import com.hubspot.seatsolver.model.PopulationResult;
 import com.hubspot.seatsolver.model.SeatCore;
@@ -46,19 +45,16 @@ public class SeatSolver {
   private static final Logger LOG = LoggerFactory.getLogger(SeatSolver.class);
 
   private final SeatSolverConfig config;
-  private final SeatGrid grid;
-  private final SeatGenotypeFactory genotypeFactory;
+  private final GreedySeatGenotypeFactory genotypeFactory;
   private final SeatGenotypeValidator genotypeValidator;
   private final GenotypeWriter genotypeWriter;
 
   @Inject
   public SeatSolver(SeatSolverConfig config,
-                    SeatGrid grid,
-                    SeatGenotypeFactory genotypeFactory,
+                    GreedySeatGenotypeFactory genotypeFactory,
                     SeatGenotypeValidator genotypeValidator,
                     GenotypeWriter genotypeWriter) {
     this.config = config;
-    this.grid = grid;
     this.genotypeFactory = genotypeFactory;
     this.genotypeValidator = genotypeValidator;
     this.genotypeWriter = genotypeWriter;

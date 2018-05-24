@@ -348,7 +348,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
                                        Map<SeatCore, Integer> seatIndex,
                                        BitSet availableSeats,
                                        int size) {
-    BitSet selected = selectBlock(grid, seats, seatIndex, availableSeats, size);
+    BitSet selected = selectBlockWithRetries(grid, seats, seatIndex, availableSeats, size);
     BitSet usedSeats = (BitSet) availableSeats.clone();
     if (selected.cardinality() < size) {
       LOG.debug("Could not find enough adjacent seats for team of size {}", size);
@@ -403,32 +403,19 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return lastIndex;
   }
 
-  private static BitSet selectBlock(SeatGrid grid,
-                                    ISeq<SeatCore> seats,
-                                    Map<SeatCore, Integer> seatIndex,
-                                    BitSet availableSeats,
-                                    int size) {
+  private static BitSet selectBlockWithRetries(SeatGrid grid,
+                                               ISeq<SeatCore> seats,
+                                               Map<SeatCore, Integer> seatIndex,
+                                               BitSet availableSeats,
+                                               int size) {
     BitSet lastSelected = new BitSet(seats.size());
 
     for (int y = 0; y < MAX_BLOCK_ATTEMPTS; y++) {
-      // pick a random starting point
+      // pick a random starting point with a low connection count
+      
       int randomSeatIndex = getAvailableIndex(availableSeats);
 
-      BitSet selected = new BitSet(seats.size());
-      selected.set(randomSeatIndex);
-
-      for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
-        if (selected.cardinality() == size) {
-          return selected;
-        }
-
-        OptionalInt adjacentIdx = selectAdjacent(seats, seatIndex, selected, availableSeats, grid);
-        if (!adjacentIdx.isPresent()) {
-          break;
-        }
-
-        selected.set(adjacentIdx.getAsInt());
-      }
+      BitSet selected = selectBlock(randomSeatIndex, grid, seats, seatIndex, availableSeats, size);
 
       if (selected.cardinality() == size) {
         return selected;
@@ -440,11 +427,36 @@ public class TeamChromosome extends AbstractSeatChromosome {
     return lastSelected;
   }
 
-  private static OptionalInt selectAdjacent(ISeq<SeatCore> allSeats,
-                                            Map<SeatCore, Integer> seatIndex,
-                                            BitSet selected,
-                                            BitSet availableSeats,
-                                            SeatGrid grid) {
+  public static BitSet selectBlock(int startIdx,
+                                   SeatGrid grid,
+                                   ISeq<SeatCore> seats,
+                                   Map<SeatCore, Integer> seatIndex,
+                                   BitSet availableSeats,
+                                   int size) {
+    BitSet selected = new BitSet(seats.size());
+    selected.set(startIdx);
+
+    for (int x = 0; x < MAX_SEAT_ATTEMPTS; x++) {
+      if (selected.cardinality() == size) {
+        return selected;
+      }
+
+      OptionalInt adjacentIdx = selectAdjacent(seats, seatIndex, selected, availableSeats, grid);
+      if (!adjacentIdx.isPresent()) {
+        break;
+      }
+
+      selected.set(adjacentIdx.getAsInt());
+    }
+
+    return selected;
+  }
+
+  public static OptionalInt selectAdjacent(ISeq<SeatCore> allSeats,
+                                           Map<SeatCore, Integer> seatIndex,
+                                           BitSet selected,
+                                           BitSet availableSeats,
+                                           SeatGrid grid) {
     Set<SeatCore> allAdjacent = new HashSet<>();
     List<SeatCore> existing = new ArrayList<>(selected.cardinality());
 
