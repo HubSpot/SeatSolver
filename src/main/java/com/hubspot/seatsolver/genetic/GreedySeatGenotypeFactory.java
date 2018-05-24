@@ -152,7 +152,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
 
       List<TeamChromosome> adjacentChromosomes = startingTeam.wantsAdjacent().stream()
           .map(Adjacency::id)
-          .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().get(teamId)))
+          .sorted(Comparator.comparing(teamId -> startingTeam.effectiveWeightsByTeamId().getOrDefault(teamId, 1.)))
           .filter(teamId -> !placedTeamIds.contains(teamId))
           .limit(4)
           .map(teamId -> chromosomeForTeamCore(selected, teamsById.get(teamId), availableSeats))
