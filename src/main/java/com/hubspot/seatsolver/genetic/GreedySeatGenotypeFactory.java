@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -45,6 +46,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
 
   private final List<SeatCore> seatsByAdjacencyCount;
   private final Map<String, TeamCore> teamsById;
+  private final Map<String, Integer> teamIndex;
 
   @Inject
   public GreedySeatGenotypeFactory(ISeq<SeatCore> seats,
@@ -61,6 +63,13 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
         .sorted(Comparator.comparing(seatCore -> grid.getAdjacent(seatCore).size()))
         .collect(Collectors.toList());
     this.teamsById = Maps.uniqueIndex(teams, TeamCore::id);
+
+    ImmutableMap.Builder<String, Integer> teamIndexBuilder = ImmutableMap.builder();
+    for (int i = 0; i < teams.size(); i++) {
+      teamIndexBuilder.put(teams.get(i).id(), i);
+    }
+
+    this.teamIndex = teamIndexBuilder.build();
   }
 
   @Override
@@ -107,8 +116,9 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     // now place any remaining teams in random order
     for (TeamCore team : teams) {
       if (!placedTeamIds.contains(team.id())) {
+        BitSet selected = new BitSet();
         for (int i = 0; i < MAX_TEAM_TRIES; i++) {
-          BitSet selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
+          selected = TeamChromosome.selectSeatBlock(grid, seats, seatIndex, availableSeats, team.numMembers());
           if (selected.cardinality() != team.numMembers()) {
             continue;
           }
@@ -123,11 +133,23 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
               team));
           break;
         }
+
+        if (selected.cardinality() != team.numMembers()) {
+          // Add it anyhow
+          availableSeats.andNot(selected);
+
+          finalChromosomes.add(new TeamChromosome(
+              grid,
+              seats,
+              seatIndex,
+              selected,
+              team));
+        }
       }
     }
 
     return finalChromosomes.stream()
-        .sorted(Comparator.comparing(chromosome -> chromosome.getTeam().id()))
+        .sorted(Comparator.comparing(c -> teamIndex.get(c.getTeam().id())))
         .collect(Collectors.toList());
   }
 

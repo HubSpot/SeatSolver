@@ -33,12 +33,19 @@ public class SeatGenotypeValidator {
     Stopwatch stopwatch = Stopwatch.createStarted();
 
     LOG.trace("Validating genotype: {}", genotype);
+    boolean hasEmpty = false;
     for (Chromosome<EnumGene<SeatCore>> chromosome : genotype) {
       if (chromosome instanceof TeamChromosome) {
         if (!((TeamChromosome) chromosome).hasTheRightNumberOfSeats()) {
           return false;
         }
+      } else {
+        hasEmpty = true;
       }
+    }
+
+    if (!hasEmpty) {
+      return false;
     }
 
     HashObjSet<String> chosen = HashObjSets.getDefaultFactory().newMutableSet();
