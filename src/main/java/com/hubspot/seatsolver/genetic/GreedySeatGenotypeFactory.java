@@ -125,7 +125,6 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
             seatIndex,
             selected,
             team));
-        break;
       }
     }
 
