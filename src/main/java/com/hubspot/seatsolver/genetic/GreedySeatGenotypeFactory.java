@@ -88,7 +88,7 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
     // TODO: make this number configurable
     List<TeamCore> startingTeams = teams.stream()
         .sorted(Comparator.comparing(TeamCore::numMembers).reversed())
-        .limit(10)
+        .limit(20)
         .sorted(Comparator.comparing(ignored -> ThreadLocalRandom.current().nextBoolean()))
         .collect(Collectors.toList());
 
