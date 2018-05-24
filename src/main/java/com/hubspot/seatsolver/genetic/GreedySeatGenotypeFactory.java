@@ -126,7 +126,9 @@ public class GreedySeatGenotypeFactory implements Factory<Genotype<EnumGene<Seat
       }
     }
 
-    return new ArrayList<>(finalChromosomes);
+    return finalChromosomes.stream()
+        .sorted(Comparator.comparing(chromosome -> chromosome.getTeam().id()))
+        .collect(Collectors.toList());
   }
 
   private List<TeamChromosome> assignStartingTeam(TeamCore startingTeam,
