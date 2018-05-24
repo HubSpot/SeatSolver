@@ -456,7 +456,7 @@ public class TeamChromosome extends AbstractSeatChromosome {
                                            BitSet selected,
                                            BitSet availableSeats,
                                            SeatGrid grid) {
-    Set<SeatCore> allAdjacent = new HashSet<>();
+    BitSet adjacent = new BitSet(allSeats.size());
     List<SeatCore> existing = new ArrayList<>(selected.cardinality());
 
     for (int i = selected.nextSetBit(0); i >= 0; i = selected.nextSetBit(i + 1)) {
@@ -464,20 +464,16 @@ public class TeamChromosome extends AbstractSeatChromosome {
         break;
       }
       existing.add(allSeats.get(i));
-      allAdjacent.addAll(grid.getAdjacent(allSeats.get(i)));
+
+      for (SeatCore adj : grid.getAdjacent(allSeats.get(i))) {
+        adjacent.set(seatIndex.get(adj));
+      }
     }
 
     BitSet availableForSelection = (BitSet) availableSeats.clone();
     availableForSelection.andNot(selected);
 
-    BitSet adjacent = new BitSet(allSeats.size());
-
-    for (SeatCore seatCore : allAdjacent) {
-      adjacent.set(seatIndex.get(seatCore));
-    }
-
     adjacent.and(availableForSelection);
-
 
     //Point center = centroid(existing.iterator());
     double minDistance = Double.MAX_VALUE;
