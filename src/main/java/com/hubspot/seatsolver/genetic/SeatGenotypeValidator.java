@@ -34,11 +34,18 @@ public class SeatGenotypeValidator {
 
     LOG.trace("Validating genotype: {}", genotype);
     boolean hasEmpty = false;
+    Set<String> teamsSeen = new HashSet<>();
     for (Chromosome<EnumGene<SeatCore>> chromosome : genotype) {
       if (chromosome instanceof TeamChromosome) {
-        if (!((TeamChromosome) chromosome).hasTheRightNumberOfSeats()) {
+        TeamChromosome teamChromosome = ((TeamChromosome) chromosome);
+        if (!teamChromosome.hasTheRightNumberOfSeats()) {
           return false;
         }
+
+        if (teamsSeen.contains(teamChromosome.getIdentifier())) {
+          return false;
+        }
+        teamsSeen.add(teamChromosome.getIdentifier());
       } else {
         hasEmpty = true;
       }
