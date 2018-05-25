@@ -89,8 +89,8 @@ public class SeatSolver {
         .individualCreationRetries(100000)
         .minimizing()
         .genotypeValidator(this.genotypeValidator::validateGenotype)
-        .populationSize(1500)
-        .survivorsSize(100)
+        .populationSize(1000)
+        .survivorsSize(66)
         .populationFilter(new ForkJoinPopulationFilter<>(forkJoinPool, 42))
         .executor(config.executor())
         .maximalPhenotypeAge(100)
@@ -114,7 +114,7 @@ public class SeatSolver {
 
     EvolutionResult<EnumGene<SeatCore>, Double> result = engine.stream()
         //.limit(Limits.byFitnessConvergence(20, 200, .000000000001))
-        .limit(Limits.byExecutionTime(Duration.of(8, ChronoUnit.HOURS)))
+        .limit(Limits.byExecutionTime(Duration.of(12, ChronoUnit.HOURS)))
         .limit(100000)
         .peek(r -> {
           statistics.accept(r);
