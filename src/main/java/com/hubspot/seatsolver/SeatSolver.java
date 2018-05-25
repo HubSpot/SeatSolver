@@ -198,7 +198,7 @@ public class SeatSolver {
     Map<String, TeamChromosome> chromosomeByTeamCore = genotype.stream()
         .filter(c -> !(c instanceof EmptySeatChromosome))
         .map(c -> ((TeamChromosome) c))
-        .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c));
+        .collect(Collectors.toMap(c -> c.getTeam().id(), c -> c, (left, right) -> right));
 
     DoubleStatistics intraTeamStats = new DoubleStatistics();
     DoubleStatistics pinnedTeamStats = new DoubleStatistics();
