@@ -357,6 +357,9 @@ public class TeamChromosome extends AbstractSeatChromosome {
       int fillAttempts = 0;
       while (selected.cardinality() < size && fillAttempts < MAX_FILL_ATTEMPTS) {
         fillAttempts++;
+        if (availableSeats.size() == 0 || availableSeats.cardinality() == 0) {
+          break;
+        }
 
         int availableSeatIdx = getAvailableIndex(availableSeats);
         if (usedSeats.get(availableSeatIdx)) {
